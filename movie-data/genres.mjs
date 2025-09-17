@@ -1,7 +1,4 @@
-// const fs = require("fs");
-import fs from "fs";
-
-let genres = [
+const genres = [
   {
     id: 28,
     name: "Action",
@@ -80,31 +77,4 @@ let genres = [
   },
 ];
 
-// Example JavaScript object
-import movies from "./source.mjs";
-
-let newMovies = {};
-newMovies.results = movies.results.map((movie) => {
-  let genreArray = [];
-  movie.genre_ids.forEach((Numid) => {
-    return genres.forEach((gen) => {
-      if (Numid === gen.id) {
-        genreArray.push(gen.name);
-      }
-    });
-  });
-  movie.genre = genreArray;
-  return movie;
-});
-
-// Convert JS object to JSON string
-const jsonData = JSON.stringify(newMovies, null, 2); // `null, 2` formats it nicely
-
-// Write JSON to a file
-fs.writeFile("movies.json", jsonData, "utf8", (err) => {
-  if (err) {
-    console.error("Error writing JSON file:", err);
-  } else {
-    console.log("JSON file has been saved as movies.json");
-  }
-});
+export default genres;

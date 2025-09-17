@@ -1,1 +1,31 @@
-html, body {  font-family: 'Roboto', sans-serif ;}.container {  width: min(65em, 100%);  margin-inline: auto;  padding-inline: 1.5rem;}.hidden {  display: none;}
+html,
+body {
+  font-family: "Roboto", sans-serif;
+}
+.container {
+  width: min(65em, 100%);
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+.hidden {
+  display: none;
+}
+
+.movie__poster {
+  width: 10em;
+  min-height: 10em;
+}
+
+p {
+  line-height: normal;
+  margin-block: 0.2em;
+}
+
+.flex__main {
+  display: flex;
+  padding: 0.5em;
+}
+
+.flex__main > * {
+  margin: 0.5em;
+}
