@@ -1764,13 +1764,13 @@ function addCharactersTemplate(parentElement) {
     img.alt = `Poster for ${movie.title}`;
     img.src = `https://image.tmdb.org/t/p/original${movie.poster_path}`;
 
-    html.querySelector("p.movie__release").textContent = movie.release_date;
-    html.querySelector("p.movie__rating").textContent = movie.vote_average;
-    html.querySelector("p.movie__genre").textContent = movie.genre
+    html.querySelector("span.movie__release").textContent = movie.release_date;
+    html.querySelector("span.movie__rating").textContent = movie.vote_average;
+    html.querySelector("span.movie__genre").textContent = movie.genre
       .map((s) => s.trim())
       .filter(Boolean)
       .join(" ");
-    html.querySelector("p.movie__overview").textContent = movie.overview;
+    html.querySelector("span.movie__overview").textContent = movie.overview;
 
     html.querySelector("a.movie__imdb").href = `https://www.imdb.com/find/?q=${
       movie.title
@@ -1782,15 +1782,32 @@ function addCharactersTemplate(parentElement) {
 }
 
 function eventListenerInput() {
-  let movieSearch = document.querySelector("#movie-search");
-  movieSearch.addEventListener("input", (event) => {
+  let searchForm = document.querySelector("#search-form");
+  searchForm.addEventListener("input", (event) => {
     event.stopPropagation();
-    let snippetSearch = movieSearch.value.toLowerCase();
+    let snippetSearch = document
+      .querySelector("#movie-search")
+      .value.toLowerCase();
+    let ratingThreshold = parseFloat(
+      document.querySelector("#movie-search-rating").value
+    );
     let details = document.querySelectorAll("details");
     details.forEach((detail) => {
       let summary = detail.querySelector("summary");
       let summaryText = summary.innerText.toLowerCase();
+
+      let rating = detail.querySelector(".movie__rating").textContent;
+      console.log(rating);
+
+      let BoolBadMatch = false;
       if (!summaryText.includes(snippetSearch)) {
+        // detail.classList.add("hidden");
+        BoolBadMatch = true;
+      } else if (rating < ratingThreshold) {
+        BoolBadMatch = true;
+      }
+
+      if (BoolBadMatch) {
         detail.classList.add("hidden");
       } else {
         detail.classList.remove("hidden");

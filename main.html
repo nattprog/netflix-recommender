@@ -21,13 +21,16 @@
     <h1>Netflix Searcher</h1>
     <header>
       <nav>
-        <form action="">
+        <label for="movie-search">Search movie title:</label>
+        <form action="" id="search-form">
           <input
             type="search"
             list="movie-search-datalist"
             name="movie-search"
             id="movie-search"
-          />
+          /><br />
+          <label for="quantity">Rating more than:</label><br />
+          <input type="number" id="movie-search-rating" name="movie-search-rating" min="0" max="10" value="0" />
           <datalist id="movie-search-datalist"> </datalist>
         </form>
       </nav>
@@ -46,12 +49,12 @@
             <img src="#" alt="movie.title" class="movie__poster" />
           </div>
           <div class="flex__2">
-            <p class="movie__release"></p>
-            <p class="movie__rating"></p>
-            <p class="movie__genre"></p>
+            <p><span>Release: </span><span class="movie__release"></span></p>
+            <p><span>Rating: </span><span class="movie__rating"></span></p>
+            <p><span>Genres: </span><span class="movie__genre"></span></p>
           </div>
         </div>
-        <p class="movie__overview"></p>
+        <p><span>Overview: </span><span class="movie__overview"></span></p>
         <a href="" class="movie__imdb">Search movie on IMDB</a>
       </details>
     </template>
