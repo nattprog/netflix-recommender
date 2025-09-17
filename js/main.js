@@ -1783,35 +1783,97 @@ function addCharactersTemplate(parentElement) {
 
 function eventListenerInput() {
   let searchForm = document.querySelector("#search-form");
+  let resetBtn = document.querySelector("#search-form-reset-btn");
   searchForm.addEventListener("input", (event) => {
     event.stopPropagation();
-    let snippetSearch = document
-      .querySelector("#movie-search")
-      .value.toLowerCase();
-    let ratingThreshold = parseFloat(
-      document.querySelector("#movie-search-rating").value
-    );
-    let details = document.querySelectorAll("details");
-    details.forEach((detail) => {
-      let summary = detail.querySelector("summary");
-      let summaryText = summary.innerText.toLowerCase();
-
-      let rating = detail.querySelector(".movie__rating").textContent;
-      console.log(rating);
-
-      let BoolBadMatch = false;
-      if (!summaryText.includes(snippetSearch)) {
-        // detail.classList.add("hidden");
-        BoolBadMatch = true;
-      } else if (rating < ratingThreshold) {
-        BoolBadMatch = true;
-      }
-
-      if (BoolBadMatch) {
-        detail.classList.add("hidden");
-      } else {
-        detail.classList.remove("hidden");
-      }
-    });
+    handleInput();
   });
+  searchForm.addEventListener("reset", handleReset);
+
+  // resetBtn.addEventListener("click", handleInput);
+}
+
+function handleInput() {
+  let snippetSearch = document
+    .querySelector("#movie-search")
+    .value.toLowerCase();
+  let ratingThreshold = parseFloat(
+    document.querySelector("#movie-search-rating").value
+  );
+  let genreSelect1 = document.querySelector("#movie-search-genre1").value;
+  let genreSelect2 = document.querySelector("#movie-search-genre2").value;
+  let genreSelect3 = document.querySelector("#movie-search-genre3").value;
+
+  let releasedAfter = document.querySelector(
+    "#movie-search-release-after"
+  ).value;
+  let releasedBefore = document.querySelector(
+    "#movie-search-release-before"
+  ).value;
+
+  let details = document.querySelectorAll("details");
+  details.forEach((detail) => {
+    detail.removeAttribute("open");
+    let summary = detail.querySelector("summary");
+    let summaryText = summary.innerText.toLowerCase();
+
+    let rating = detail.querySelector(".movie__rating").textContent;
+
+    let genre = detail.querySelector(".movie__genre").textContent;
+
+    let release = detail.querySelector(".movie__release").textContent;
+
+    // match cases for filtering
+    let BoolBadMatch = false;
+    // filter out unmatches for title
+    if (!summaryText.includes(snippetSearch)) {
+      // detail.classList.add("hidden");
+      BoolBadMatch = true;
+    } //filter out unmatches for rating
+    else if (rating < ratingThreshold) {
+      BoolBadMatch = true;
+    } //filter out unmatches for genre
+    else if (
+      !genre.includes(genreSelect1) ||
+      !genre.includes(genreSelect2) ||
+      !genre.includes(genreSelect3)
+    ) {
+      BoolBadMatch = true;
+    }
+    // filtere out unmatches for dates
+    if (releasedAfter) {
+      const after = new Date(releasedAfter);
+      const rel = new Date(release);
+      if (after > rel) {
+        BoolBadMatch = true;
+      }
+    }
+    if (releasedBefore) {
+      const before = new Date(releasedBefore);
+      const rel = new Date(release);
+      if (before < rel) {
+        BoolBadMatch = true;
+      }
+    }
+
+    if (BoolBadMatch) {
+      detail.classList.add("hidden");
+    } else {
+      detail.classList.remove("hidden");
+    }
+  });
+}
+
+function handleReset(event) {
+  event.stopPropagation();
+  event.preventDefault();
+  document.querySelector("#movie-search").value = "";
+  document.querySelector("#movie-search-rating").value = 0;
+  document.querySelector("#movie-search-genre1").value = "";
+  document.querySelector("#movie-search-genre2").value = "";
+  document.querySelector("#movie-search-genre3").value = "";
+  document.querySelector("#movie-search-release-after").value = "";
+  document.querySelector("#movie-search-release-before").value = "";
+
+  handleInput();
 }

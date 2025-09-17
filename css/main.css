@@ -2,6 +2,16 @@ html,
 body {
   font-family: "Roboto", sans-serif;
 }
+
+p {
+  line-height: normal;
+  margin-block: 0.2em;
+}
+
+select {
+  max-width: fit-content;
+}
+
 .container {
   width: min(65em, 100%);
   margin-inline: auto;
@@ -16,10 +26,7 @@ body {
   min-height: 10em;
 }
 
-p {
-  line-height: normal;
-  margin-block: 0.2em;
-}
+
 
 .flex__main {
   display: flex;
@@ -29,6 +36,8 @@ p {
 .flex__main > * {
   margin: 0.5em;
 }
+
+
 
 @keyframes details-show {
   from {

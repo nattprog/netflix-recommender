@@ -29,9 +29,100 @@
             name="movie-search"
             id="movie-search"
           /><br />
-          <label for="quantity">Rating more than:</label><br />
-          <input type="number" id="movie-search-rating" name="movie-search-rating" min="0" max="10" value="0" />
-          <datalist id="movie-search-datalist"> </datalist>
+          <label for="movie-search-rating">Rating more than:</label><br />
+          <input
+            type="number"
+            id="movie-search-rating"
+            name="movie-search-rating"
+            min="0"
+            max="10"
+            value="0"
+          />
+          <br />
+          <!-- <datalist id="movie-search-datalist"> </datalist> -->
+          <label for="movie-search-genre1">Genres matching:</label><br />
+          <select id="movie-search-genre1" name="movie-search-genre1">
+            <option value="" selected>-</option>
+            <option value="Action">Action</option>
+            <option value="Adventure">Adventure</option>
+            <option value="Animation">Animation</option>
+            <option value="Comedy">Comedy</option>
+            <option value="Crime">Crime</option>
+            <option value="Documentary">Documentary</option>
+            <option value="Drama">Drama</option>
+            <option value="Family">Family</option>
+            <option value="Fantasy">Fantasy</option>
+            <option value="History">History</option>
+            <option value="Horror">Horror</option>
+            <option value="Music">Music</option>
+            <option value="Mystery">Mystery</option>
+            <option value="Romance">Romance</option>
+            <option value="Science Fiction">Science Fiction</option>
+            <option value="Movie">TV Movie</option>
+            <option value="Thriller">Thriller</option>
+            <option value="War">War</option>
+            <option value="Western">Western</option></select
+          ><br />
+          <select id="movie-search-genre2" name="movie-search-genre2">
+            <option value="" selected>-</option>
+            <option value="Action">Action</option>
+            <option value="Adventure">Adventure</option>
+            <option value="Animation">Animation</option>
+            <option value="Comedy">Comedy</option>
+            <option value="Crime">Crime</option>
+            <option value="Documentary">Documentary</option>
+            <option value="Drama">Drama</option>
+            <option value="Family">Family</option>
+            <option value="Fantasy">Fantasy</option>
+            <option value="History">History</option>
+            <option value="Horror">Horror</option>
+            <option value="Music">Music</option>
+            <option value="Mystery">Mystery</option>
+            <option value="Romance">Romance</option>
+            <option value="Science Fiction">Science Fiction</option>
+            <option value="Movie">TV Movie</option>
+            <option value="Thriller">Thriller</option>
+            <option value="War">War</option>
+            <option value="Western">Western</option></select
+          ><br />
+          <select id="movie-search-genre3" name="movie-search-genre3">
+            <option value="" selected>-</option>
+            <option value="Action">Action</option>
+            <option value="Adventure">Adventure</option>
+            <option value="Animation">Animation</option>
+            <option value="Comedy">Comedy</option>
+            <option value="Crime">Crime</option>
+            <option value="Documentary">Documentary</option>
+            <option value="Drama">Drama</option>
+            <option value="Family">Family</option>
+            <option value="Fantasy">Fantasy</option>
+            <option value="History">History</option>
+            <option value="Horror">Horror</option>
+            <option value="Music">Music</option>
+            <option value="Mystery">Mystery</option>
+            <option value="Romance">Romance</option>
+            <option value="Science Fiction">Science Fiction</option>
+            <option value="Movie">TV Movie</option>
+            <option value="Thriller">Thriller</option>
+            <option value="War">War</option>
+            <option value="Western">Western</option></select
+          ><br />
+          <label for="movie-search-date-after">Released after:</label>
+          <br />
+          <input
+            type="date"
+            id="movie-search-release-after"
+            name="release-start"
+          /><br />
+          <label for="movie-search-release-before">Released before:</label>
+          <br />
+          <input
+            type="date"
+            id="movie-search-release-before"
+            name="release-start"
+          /><br />
+
+          <input type="reset" id="search-form-reset-btn" />
         </form>
       </nav>
     </header>
