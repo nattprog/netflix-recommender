@@ -1,11 +1,27 @@
 html,
 body {
   font-family: "Roboto", sans-serif;
+  color: whitesmoke;
+  background-color: black;
+}
+
+h1 {
+  color: crimson;
+}
+
+nav {
+  padding: 10px;
+  
 }
 
 p {
   line-height: normal;
   margin-block: 0.2em;
+}
+
+.movie__overview {
+  display: flex;
+  align-items: center;
 }
 
 select {
@@ -26,6 +42,14 @@ select {
   min-height: 10em;
 }
 
+.summary {
+  background-color: rgb(50,50,50);
+  padding-left: 10px;
+}
+
+.movie {
+  background-color: rgb(65,65,65);  
+}
 
 
 .flex__main {
