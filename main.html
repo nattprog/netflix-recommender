@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en">  
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DOM Manipulation</title>
+    <title>Netflix Searcher</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- add a google font link here -->
@@ -28,6 +28,8 @@
             list="movie-search-datalist"
             name="movie-search"
             id="movie-search"
+            class="movie-search"
+            placeholder="Enter movie title here"
           /><br />
           <label for="movie-search-rating">Rating more than:</label><br />
           <input
@@ -37,11 +39,12 @@
             min="0"
             max="10"
             value="0"
+            class="movie-search-rating"
           />
           <br />
           <!-- <datalist id="movie-search-datalist"> </datalist> -->
           <label for="movie-search-genre1">Genres matching:</label><br />
-          <select id="movie-search-genre1" name="movie-search-genre1">
+          <select id="movie-search-genre1" name="movie-search-genre1" class="movie-search-genre">
             <option value="" selected>-</option>
             <option value="Action">Action</option>
             <option value="Adventure">Adventure</option>
@@ -63,7 +66,7 @@
             <option value="War">War</option>
             <option value="Western">Western</option></select
           ><br />
-          <select id="movie-search-genre2" name="movie-search-genre2">
+          <select id="movie-search-genre2" name="movie-search-genre2" class="movie-search-genre">
             <option value="" selected>-</option>
             <option value="Action">Action</option>
             <option value="Adventure">Adventure</option>
@@ -85,7 +88,7 @@
             <option value="War">War</option>
             <option value="Western">Western</option></select
           ><br />
-          <select id="movie-search-genre3" name="movie-search-genre3">
+          <select id="movie-search-genre3" name="movie-search-genre3" class="movie-search-genre">
             <option value="" selected>-</option>
             <option value="Action">Action</option>
             <option value="Adventure">Adventure</option>
@@ -113,6 +116,7 @@
             type="date"
             id="movie-search-release-after"
             name="release-start"
+            class="movie-search-date"
           /><br />
           <label for="movie-search-release-before">Released before:</label>
           <br />
@@ -120,6 +124,7 @@
             type="date"
             id="movie-search-release-before"
             name="release-start"
+            class="movie-search-date"
           /><br />
 
           <input type="reset" id="search-form-reset-btn" />
@@ -132,7 +137,7 @@
     <!-- template for generating content -->
     <template id="movie-template">
       <details data-ref="" class="movie">
-        <summary>
+        <summary class="summary">
           <strong class="movie__title">Movie name here</strong>
         </summary>
         <div class="flex__main">
