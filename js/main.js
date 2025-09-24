@@ -5,11 +5,11 @@ setMovies();
 
 (() => {
   const main = document.querySelector("#search-results");
-  addMoviesListHtml(main);
-  setEventListeners();
+  addCharactersTemplate(main);
+  eventListenerInput();
 })();
 
-function addMoviesListHtml(parentElement) {
+function addCharactersTemplate(parentElement) {
   //append to parentElement
   let template = document.getElementById("movie-template");
   let fragment = document.createDocumentFragment();
@@ -40,17 +40,19 @@ function addMoviesListHtml(parentElement) {
   parentElement.append(fragment);
 }
 
-function setEventListeners() {
+function eventListenerInput() {
   let searchForm = document.querySelector("#search-form");
+  let resetBtn = document.querySelector("#search-form-reset-btn");
   searchForm.addEventListener("input", (event) => {
     event.stopPropagation();
     handleInput();
   });
   searchForm.addEventListener("reset", handleReset);
+
+  // resetBtn.addEventListener("click", handleInput);
 }
 
 function handleInput() {
-  // get the contents of all the inputs
   let snippetSearch = document
     .querySelector("#movie-search")
     .value.toLowerCase();
@@ -69,11 +71,10 @@ function handleInput() {
   ).value;
 
   let details = document.querySelectorAll("details");
-  // Iterate through each movie
   details.forEach((detail) => {
     detail.removeAttribute("open");
     let summary = detail.querySelector("summary");
-    let summaryTitle = summary.innerText.toLowerCase();
+    let summaryText = summary.innerText.toLowerCase();
 
     let rating = detail.querySelector(".movie__rating").textContent;
 
@@ -82,48 +83,41 @@ function handleInput() {
     let release = detail.querySelector(".movie__release").textContent;
 
     // match cases for filtering
-    let badMatchBool = false;
-    // check if the title contains the search term
-    if (!summaryTitle.includes(snippetSearch)) {
-      // if title doesnt contain the search term
-      badMatchBool = true;
+    let BoolBadMatch = false;
+    // filter out unmatches for title
+    if (!summaryText.includes(snippetSearch)) {
+      // detail.classList.add("hidden");
+      BoolBadMatch = true;
     } //filter out unmatches for rating
     else if (rating < ratingThreshold) {
-      // if the rating of the movie is less than the threshold
-      badMatchBool = true;
-    } // filter out unmatches for genre
+      BoolBadMatch = true;
+    } //filter out unmatches for genre
     else if (
       !genre.includes(genreSelect1) ||
       !genre.includes(genreSelect2) ||
       !genre.includes(genreSelect3)
     ) {
-      // if the genres of the movie does not contain all the genres selected
-      badMatchBool = true;
+      BoolBadMatch = true;
     }
-    // only check this if the user has selected a date
+    // filtere out unmatches for dates
     if (releasedAfter) {
       const after = new Date(releasedAfter);
       const rel = new Date(release);
-      // if the release of the movie is before the selected date
       if (after > rel) {
-        badMatchBool = true;
+        BoolBadMatch = true;
       }
     }
-    // only check this if the user has selected a date
     if (releasedBefore) {
       const before = new Date(releasedBefore);
       const rel = new Date(release);
       if (before < rel) {
-        // if the release of the movie is after the selected date
-        badMatchBool = true;
+        BoolBadMatch = true;
       }
     }
 
-    if (badMatchBool) {
-      // if any of the filters fails, hide the result by adding hidden class
+    if (BoolBadMatch) {
       detail.classList.add("hidden");
     } else {
-      // else, make sure it's displayed by removing the hidden class
       detail.classList.remove("hidden");
     }
   });
@@ -142,6 +136,19 @@ function handleReset(event) {
 
   handleInput();
 }
+
+// check movie-search-rating value stays between 0 and 10
+const ratingInput = document.getElementById('movie-search-rating');
+
+ratingInput.addEventListener('input', function () {
+  let value = Number(ratingInput.value);
+  if (value < 0) {
+    ratingInput.value = 0;
+  } else if (value > 10) {
+    ratingInput.value = 10;
+  }
+});
+
 
 function setMovies() {
   MOVIES = [

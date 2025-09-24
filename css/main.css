@@ -22,7 +22,18 @@ nav {
   background-color: rgb(45,45,45);
   border-radius: 4px;
   width: 15em;
+  height: 2.5em;
+  padding: 0.5em;
+  font-size: 1em;
+  transition: border-color 0.2s;
 }
+
+.movie-search:focus, .movie-search-rating:focus, .movie-search-genre:focus, .movie-search-date:focus {
+  border: 2px solid;
+  border-color: crimson;
+  outline: none;
+}
+
 
 p {
   line-height: normal;
