@@ -1877,3 +1877,15 @@ function handleReset(event) {
 
   handleInput();
 }
+
+// check movie-search-rating value stays between 0 and 10
+const ratingInput = document.getElementById('movie-search-rating');
+
+ratingInput.addEventListener('input', function () {
+  let value = Number(ratingInput.value);
+  if (value < 0) {
+    ratingInput.value = 0;
+  } else if (value > 10) {
+    ratingInput.value = 10;
+  }
+});
