@@ -3,56 +3,102 @@ let MOVIES = {};
 // set movies object containing movie data to variable
 setMovies();
 
+// IIFE to run the program
 (() => {
+  // select the parent element that will contain the search results
   const main = document.querySelector("#search-results");
-  addCharactersTemplate(main);
-  eventListenerInput();
+
+  // handle errors in loading movies from data
+  try {
+    // generate the html containing the movie data
+    addMoviesFromData(main);
+  } catch (error) {
+    console.log(error);
+    alert(
+      "Error encountered in loading movies. Please try refreshing the page."
+    );
+  }
+
+  // handle errors in refreshing the page
+  try {
+    // add event listeners to react to changes in the filters in real time
+    addInputEventListener();
+  } catch (error) {
+    console.log(error);
+    alert(
+      "Error encountered in adding event listeners. Please try refreshing the page."
+    );
+  }
 })();
 
-function addCharactersTemplate(parentElement) {
-  //append to parentElement
+// function to load movie data and create html content
+function addMoviesFromData(parentElement) {
+  // get the template stored in the html
   let template = document.getElementById("movie-template");
+  // create a document to append new content to without interfering with the main document object
   let fragment = document.createDocumentFragment();
+  // iterate through each movie
   MOVIES.forEach((movie) => {
+    // clone the template, one for each movie
     let html = template.content.cloneNode(true);
+
+    // populate the cloned html elements with movie data
+    // use conditional assignment in the form of
+    // = (if case true) ? (then this) : (else this)
+    // to make sure all missing data is handled gracefully
     let details = html.querySelector("details.movie");
     details.setAttribute("data-ref", movie.id);
-
     html.querySelector("strong.movie__title").textContent = movie.title;
     let img = html.querySelector("img.movie__poster");
     img.alt = `Poster for ${movie.title}`;
-    img.src = `https://image.tmdb.org/t/p/original${movie.poster_path}`;
-
-    html.querySelector("span.movie__release").textContent = movie.release_date;
-    html.querySelector("span.movie__rating").textContent = movie.vote_average;
+    img.src = movie.poster_path
+      ? `https://image.tmdb.org/t/p/original${movie.poster_path}`
+      : "https://cdn.pixabay.com/photo/2017/02/12/21/29/false-2061132_1280.png"; // show error image
+    html.querySelector("span.movie__release").textContent = movie.release_date
+      ? movie.release_date
+      : "Release date available";
+    html.querySelector("span.movie__rating").textContent = movie.vote_average
+      ? movie.vote_average
+      : "Vote average unavailable";
     html.querySelector("span.movie__genre").textContent = movie.genre
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .join(" ");
-    html.querySelector("span.movie__overview").textContent = movie.overview;
+      ? movie.genre
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .join(" ")
+      : "Genres unavailable";
+    html.querySelector("span.movie__overview").textContent = movie.overview
+      ? movie.overview
+      : "Overview unavailable";
+    html.querySelector("a.movie__imdb").href =
+      movie.title && movie.release_date
+        ? `https://www.imdb.com/find/?q=${
+            movie.title
+          } ${movie.release_date.slice(0, 4)}&s=tt&ttype=ft&exact=true&`
+        : "";
 
-    html.querySelector("a.movie__imdb").href = `https://www.imdb.com/find/?q=${
-      movie.title
-    } ${movie.release_date.slice(0, 4)}&s=tt&ttype=ft&exact=true&`;
-
+    // append the movie to the fragment
     fragment.append(details);
   });
+  // finally, append all the movies to the document object (and render it)
   parentElement.append(fragment);
 }
 
-function eventListenerInput() {
+// Function to add event listeners to the form
+function addInputEventListener() {
+  // select the form with all the filters
   let searchForm = document.querySelector("#search-form");
-  let resetBtn = document.querySelector("#search-form-reset-btn");
+  // add a listener to detect all changes of the form's values, such as search or genre filters
   searchForm.addEventListener("input", (event) => {
     event.stopPropagation();
     handleInput();
   });
+  // customize the reset button's functionality in order to add the ability to refresh all the movies displayed after resetting
   searchForm.addEventListener("reset", handleReset);
-
-  // resetBtn.addEventListener("click", handleInput);
 }
 
+// Function to handle changing of values in the form
 function handleInput() {
+  // get all the form input elements' values
   let snippetSearch = document
     .querySelector("#movie-search")
     .value.toLowerCase();
@@ -62,7 +108,6 @@ function handleInput() {
   let genreSelect1 = document.querySelector("#movie-search-genre1").value;
   let genreSelect2 = document.querySelector("#movie-search-genre2").value;
   let genreSelect3 = document.querySelector("#movie-search-genre3").value;
-
   let releasedAfter = document.querySelector(
     "#movie-search-release-after"
   ).value;
@@ -70,26 +115,28 @@ function handleInput() {
     "#movie-search-release-before"
   ).value;
 
+  // iterate through each movie and show or hide according to whether the filters allow it
   let details = document.querySelectorAll("details");
   details.forEach((detail) => {
+    // close the dropdown of each movie
     detail.removeAttribute("open");
+
+    // get the movie's details to sort by
     let summary = detail.querySelector("summary");
     let summaryText = summary.innerText.toLowerCase();
-
     let rating = detail.querySelector(".movie__rating").textContent;
-
     let genre = detail.querySelector(".movie__genre").textContent;
-
     let release = detail.querySelector(".movie__release").textContent;
 
     // match cases for filtering
     let BoolBadMatch = false;
     // filter out unmatches for title
     if (!summaryText.includes(snippetSearch)) {
-      // detail.classList.add("hidden");
+      // if the title does not contain the search term, the bad match flag is set to true resulting in the movie being hidden
       BoolBadMatch = true;
     } //filter out unmatches for rating
     else if (rating < ratingThreshold) {
+      // bad match if the rating is less than threshold
       BoolBadMatch = true;
     } //filter out unmatches for genre
     else if (
@@ -97,13 +144,15 @@ function handleInput() {
       !genre.includes(genreSelect2) ||
       !genre.includes(genreSelect3)
     ) {
+      // bad match if movie's genres does not contain all of the selected genres
       BoolBadMatch = true;
     }
-    // filtere out unmatches for dates
+    // filter out unmatches for dates
     if (releasedAfter) {
       const after = new Date(releasedAfter);
       const rel = new Date(release);
       if (after > rel) {
+        // bad match if movie released before the selected date
         BoolBadMatch = true;
       }
     }
@@ -111,10 +160,12 @@ function handleInput() {
       const before = new Date(releasedBefore);
       const rel = new Date(release);
       if (before < rel) {
+        // bad match if movie released after the selected date
         BoolBadMatch = true;
       }
     }
 
+    // hide or show the movie in the results according to whether the bad match was set to true in any of the filters
     if (BoolBadMatch) {
       detail.classList.add("hidden");
     } else {
@@ -124,6 +175,7 @@ function handleInput() {
 }
 
 function handleReset(event) {
+  // reset all the form's values
   event.stopPropagation();
   event.preventDefault();
   document.querySelector("#movie-search").value = "";
@@ -134,13 +186,14 @@ function handleReset(event) {
   document.querySelector("#movie-search-release-after").value = "";
   document.querySelector("#movie-search-release-before").value = "";
 
+  // run the hiding/showing of movies to reset results
   handleInput();
 }
 
 // check movie-search-rating value stays between 0 and 10
-const ratingInput = document.getElementById('movie-search-rating');
+const ratingInput = document.getElementById("movie-search-rating");
 
-ratingInput.addEventListener('input', function () {
+ratingInput.addEventListener("input", function () {
   let value = Number(ratingInput.value);
   if (value < 0) {
     ratingInput.value = 0;
@@ -149,13 +202,13 @@ ratingInput.addEventListener('input', function () {
   }
 });
 
-
+// function to set movie data to MOVIES variable
 function setMovies() {
+  // NOTE: Movie data is taken from TheMovieDB API, via API requests.
+  // e.g. https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&page=1&sort_by=popularity.desc&vote_average.gte=8&page=1
   MOVIES = [
     {
-      adult: false,
       backdrop_path: "/w3Bi0wygeFQctn6AqFTwhGNXRwL.jpg",
-      genre_ids: [16, 35, 14, 10402],
       id: 803796,
       original_language: "en",
       original_title: "KPop Demon Hunters",
@@ -165,15 +218,12 @@ function setMovies() {
       poster_path: "/22AouvwlhlXbe3nrFcjzL24bvWH.jpg",
       release_date: "2025-06-20",
       title: "KPop Demon Hunters",
-      video: false,
       vote_average: 8.331,
       vote_count: 1390,
       genre: ["Animation", "Comedy", "Fantasy", "Music"],
     },
     {
-      adult: false,
       backdrop_path: "/vHTFrcqJoCi1is3XN0PZe2LSnI2.jpg",
-      genre_ids: [14, 10751, 28, 12],
       id: 1087192,
       original_language: "en",
       original_title: "How to Train Your Dragon",
@@ -183,15 +233,12 @@ function setMovies() {
       poster_path: "/q5pXRYTycaeW6dEgsCrd4mYPmxM.jpg",
       release_date: "2025-06-06",
       title: "How to Train Your Dragon",
-      video: false,
       vote_average: 8.033,
       vote_count: 1897,
       genre: ["Fantasy", "Family", "Action", "Adventure"],
     },
     {
-      adult: false,
       backdrop_path: null,
-      genre_ids: [],
       id: 1100842,
       original_language: "ja",
       original_title: "新婚シリーズ　最初が肝心",
@@ -200,15 +247,12 @@ function setMovies() {
       poster_path: "/f52F9CBy6nY5vmOv07FMsexyVpJ.jpg",
       release_date: "1962-02-07",
       title: "新婚シリーズ　最初が肝心",
-      video: false,
       vote_average: 10,
       vote_count: 1,
       genre: [],
     },
     {
-      adult: false,
       backdrop_path: "/zxi6WQPVc0uQAG5TtLsKvxYHApC.jpg",
-      genre_ids: [16, 14, 12, 28],
       id: 980477,
       original_language: "zh",
       original_title: "哪吒之魔童闹海",
@@ -218,15 +262,12 @@ function setMovies() {
       poster_path: "/cb5NyNrqiCNNoDkA8FfxHAtypdG.jpg",
       release_date: "2025-01-29",
       title: "Ne Zha 2",
-      video: false,
       vote_average: 8.067,
       vote_count: 359,
       genre: ["Animation", "Fantasy", "Adventure", "Action"],
     },
     {
-      adult: false,
       backdrop_path: "/vgnoBSVzWAV9sNQUORaDGvDp7wx.jpg",
-      genre_ids: [12, 18, 878],
       id: 157336,
       original_language: "en",
       original_title: "Interstellar",
@@ -236,15 +277,12 @@ function setMovies() {
       poster_path: "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
       release_date: "2014-11-05",
       title: "Interstellar",
-      video: false,
       vote_average: 8.46,
       vote_count: 37844,
       genre: ["Adventure", "Drama", "Science Fiction"],
     },
     {
-      adult: false,
       backdrop_path: "/oBcvmHD7lbaX8RZ7NXvO05fIJef.jpg",
-      genre_ids: [10749, 18, 35],
       id: 1355666,
       original_language: "ko",
       original_title: "고백의 역사",
@@ -254,15 +292,12 @@ function setMovies() {
       poster_path: "/e7jStO2xfBUAUK37LbINHd1qtgy.jpg",
       release_date: "2025-08-28",
       title: "Love Untangled",
-      video: false,
       vote_average: 8.539,
       vote_count: 77,
       genre: ["Romance", "Drama", "Comedy"],
     },
     {
-      adult: false,
       backdrop_path: "/oYPm2zk8fBxm3UBEiaWMzUGHeFW.jpg",
-      genre_ids: [35, 14],
       id: 1428213,
       original_language: "tl",
       original_title: "Kontrabida Academy",
@@ -272,15 +307,12 @@ function setMovies() {
       poster_path: "/uiW2ff73RZzPABKtnjW5wmt43CU.jpg",
       release_date: "2025-09-10",
       title: "Kontrabida Academy",
-      video: false,
       vote_average: 8.1,
       vote_count: 5,
       genre: ["Comedy", "Fantasy"],
     },
     {
-      adult: false,
       backdrop_path: null,
-      genre_ids: [],
       id: 1140142,
       original_language: "ja",
       original_title: "やくざ囃子",
@@ -289,15 +321,12 @@ function setMovies() {
       poster_path: "/1pOfALcXkc5yU2FPTwmMBnXUQK.jpg",
       release_date: "1954-06-30",
       title: "Yakuza bayashi",
-      video: false,
       vote_average: 10,
       vote_count: 1,
       genre: [],
     },
     {
-      adult: false,
       backdrop_path: null,
-      genre_ids: [16],
       id: 846817,
       original_language: "ar",
       original_title: "ليل",
@@ -307,15 +336,12 @@ function setMovies() {
       poster_path: "/wtNHVaiEWwc05Iwzu1gravgvtDo.jpg",
       release_date: "2024-09-07",
       title: "Night",
-      video: false,
       vote_average: 10,
       vote_count: 3,
       genre: ["Animation"],
     },
     {
-      adult: false,
       backdrop_path: null,
-      genre_ids: [],
       id: 1052243,
       original_language: "en",
       original_title: "MANUEL",
@@ -325,15 +351,12 @@ function setMovies() {
       poster_path: "/hpYt0ouIHcZhbxQDT4JFXLY3fih.jpg",
       release_date: "2022-11-23",
       title: "MANUEL",
-      video: false,
       vote_average: 10,
       vote_count: 1,
       genre: [],
     },
     {
-      adult: false,
       backdrop_path: "/xPpXYnCWfjkt3zzE0dpCNME1pXF.jpg",
-      genre_ids: [16, 28, 14, 53],
       id: 635302,
       original_language: "ja",
       original_title: "劇場版「鬼滅の刃」無限列車編",
@@ -343,15 +366,12 @@ function setMovies() {
       poster_path: "/h8Rb9gBr48ODIwYUttZNYeMWeUU.jpg",
       release_date: "2020-10-16",
       title: "Demon Slayer -Kimetsu no Yaiba- The Movie: Mugen Train",
-      video: false,
       vote_average: 8.208,
       vote_count: 4208,
       genre: ["Animation", "Action", "Fantasy", "Thriller"],
     },
     {
-      adult: false,
       backdrop_path: "/jvzPTf0nhsqAXodYT6ILKb99IA2.jpg",
-      genre_ids: [18, 10749, 36],
       id: 1289936,
       original_language: "en",
       original_title: "Downton Abbey: The Grand Finale",
@@ -361,15 +381,12 @@ function setMovies() {
       poster_path: "/jqIoQwfFaBZDJUIvjFwJTWlmRfO.jpg",
       release_date: "2025-09-10",
       title: "Downton Abbey: The Grand Finale",
-      video: false,
       vote_average: 8.045,
       vote_count: 22,
       genre: ["Drama", "Romance", "History"],
     },
     {
-      adult: false,
       backdrop_path: "/enNubozHn9pXi0ycTVYUWfpHZm.jpg",
-      genre_ids: [18, 28, 80, 53],
       id: 155,
       original_language: "en",
       original_title: "The Dark Knight",
@@ -379,15 +396,12 @@ function setMovies() {
       poster_path: "/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
       release_date: "2008-07-16",
       title: "The Dark Knight",
-      video: false,
       vote_average: 8.523,
       vote_count: 34372,
       genre: ["Drama", "Action", "Crime", "Thriller"],
     },
     {
-      adult: false,
       backdrop_path: null,
-      genre_ids: [18],
       id: 1282667,
       original_language: "no",
       original_title: "Elsa",
@@ -397,15 +411,12 @@ function setMovies() {
       poster_path: "/ln03NRzEsNa4D9jEQ25r7s9fqH7.jpg",
       release_date: "2024-08-08",
       title: "Elsa",
-      video: false,
       vote_average: 10,
       vote_count: 1,
       genre: ["Drama"],
     },
     {
-      adult: false,
       backdrop_path: "/pNjh59JSxChQktamG3LMp9ZoQzp.jpg",
-      genre_ids: [18, 80],
       id: 278,
       original_language: "en",
       original_title: "The Shawshank Redemption",
@@ -415,15 +426,12 @@ function setMovies() {
       poster_path: "/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg",
       release_date: "1994-09-23",
       title: "The Shawshank Redemption",
-      video: false,
       vote_average: 8.712,
       vote_count: 28880,
       genre: ["Drama", "Crime"],
     },
     {
-      adult: false,
       backdrop_path: "/mDfJG3LC3Dqb67AZ52x3Z0jU0uB.jpg",
-      genre_ids: [12, 28, 878],
       id: 299536,
       original_language: "en",
       original_title: "Avengers: Infinity War",
@@ -433,15 +441,12 @@ function setMovies() {
       poster_path: "/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg",
       release_date: "2018-04-25",
       title: "Avengers: Infinity War",
-      video: false,
       vote_average: 8.235,
       vote_count: 30934,
       genre: ["Adventure", "Action", "Science Fiction"],
     },
     {
-      adult: false,
       backdrop_path: "/kQzPzOfB0WnWPth65vG5qHvZ487.jpg",
-      genre_ids: [10749],
       id: 1234720,
       original_language: "ko",
       original_title: "부부 교환 - 무삭제",
@@ -451,15 +456,12 @@ function setMovies() {
       poster_path: "/7WFlsCBnVyVfJxZWprAkU4poCaJ.jpg",
       release_date: "2023-03-16",
       title: "Couple Exchange",
-      video: false,
       vote_average: 9.8,
       vote_count: 4,
       genre: ["Romance"],
     },
     {
-      adult: false,
       backdrop_path: "/z51Wzj94hvAIsWfknifKTqKJRwp.jpg",
-      genre_ids: [12, 14, 28],
       id: 120,
       original_language: "en",
       original_title: "The Lord of the Rings: The Fellowship of the Ring",
@@ -469,15 +471,12 @@ function setMovies() {
       poster_path: "/6oom5QYQ2yQTMJIbnvbkBL9cHo6.jpg",
       release_date: "2001-12-18",
       title: "The Lord of the Rings: The Fellowship of the Ring",
-      video: false,
       vote_average: 8.4,
       vote_count: 26373,
       genre: ["Adventure", "Fantasy", "Action"],
     },
     {
-      adult: false,
       backdrop_path: "/7Nwnmyzrtd0FkcRyPqmdzTPppQa.jpg",
-      genre_ids: [80, 18, 35],
       id: 106646,
       original_language: "en",
       original_title: "The Wolf of Wall Street",
@@ -487,15 +486,12 @@ function setMovies() {
       poster_path: "/kW9LmvYHAaS9iA0tHmZVq8hQYoq.jpg",
       release_date: "2013-12-25",
       title: "The Wolf of Wall Street",
-      video: false,
       vote_average: 8.028,
       vote_count: 24973,
       genre: ["Crime", "Drama", "Comedy"],
     },
     {
-      adult: false,
       backdrop_path: "/gqby0RhyehP3uRrzmdyUZ0CgPPe.jpg",
-      genre_ids: [28, 878, 12],
       id: 27205,
       original_language: "en",
       original_title: "Inception",
@@ -505,15 +501,12 @@ function setMovies() {
       poster_path: "/ljsZTbVsrQSqZgWeep2B1QiDKuh.jpg",
       release_date: "2010-07-15",
       title: "Inception",
-      video: false,
       vote_average: 8.37,
       vote_count: 37946,
       genre: ["Action", "Science Fiction", "Adventure"],
     },
     {
-      adult: false,
       backdrop_path: "/9Q7Q6B4hVE6DWl72m02mJceMCQS.jpg",
-      genre_ids: [99, 35],
       id: 1158166,
       original_language: "en",
       original_title:
@@ -524,15 +517,12 @@ function setMovies() {
       poster_path: "/g6VRpkGbbSm8i8rYdYJ1YfwvrC1.jpg",
       release_date: "2023-09-23",
       title: "A Big Gay Hairy Hit! Where the Bears Are: The Documentary",
-      video: false,
       vote_average: 9.5,
       vote_count: 2,
       genre: ["Documentary", "Comedy"],
     },
     {
-      adult: false,
       backdrop_path: "/tmU7GeKVybMWFButWEGl2M4GeiP.jpg",
-      genre_ids: [18, 80],
       id: 238,
       original_language: "en",
       original_title: "The Godfather",
@@ -542,15 +532,12 @@ function setMovies() {
       poster_path: "/3bhkrj58Vtu7enYsRolD1fZdja1.jpg",
       release_date: "1972-03-14",
       title: "The Godfather",
-      video: false,
       vote_average: 8.685,
       vote_count: 21827,
       genre: ["Drama", "Crime"],
     },
     {
-      adult: false,
       backdrop_path: "/wSJHuSD7ojzoXifWjOAjxV7UpEL.jpg",
-      genre_ids: [10751, 16, 10402, 12],
       id: 354912,
       original_language: "en",
       original_title: "Coco",
@@ -560,15 +547,12 @@ function setMovies() {
       poster_path: "/6Ryitt95xrO8KXuqRGm1fUuNwqF.jpg",
       release_date: "2017-10-27",
       title: "Coco",
-      video: false,
       vote_average: 8.202,
       vote_count: 20229,
       genre: ["Family", "Animation", "Music", "Adventure"],
     },
     {
-      adult: false,
       backdrop_path: "/2u7zbn8EudG6kLlBzUYqP8RyFU4.jpg",
-      genre_ids: [12, 14, 28],
       id: 122,
       original_language: "en",
       original_title: "The Lord of the Rings: The Return of the King",
@@ -578,15 +562,12 @@ function setMovies() {
       poster_path: "/rCzpDGLbOoPwLjy3OAm5NUPOTrC.jpg",
       release_date: "2003-12-17",
       title: "The Lord of the Rings: The Return of the King",
-      video: false,
       vote_average: 8.5,
       vote_count: 25448,
       genre: ["Adventure", "Fantasy", "Action"],
     },
     {
-      adult: false,
       backdrop_path: "/p1PLSI5Nw2krGxD7X4ulul1tDAk.jpg",
-      genre_ids: [80, 9648, 53],
       id: 807,
       original_language: "en",
       original_title: "Se7en",
@@ -596,15 +577,12 @@ function setMovies() {
       poster_path: "/191nKfP0ehp3uIvWqgPbFmI4lv9.jpg",
       release_date: "1995-09-22",
       title: "Se7en",
-      video: false,
       vote_average: 8.377,
       vote_count: 22090,
       genre: ["Crime", "Mystery", "Thriller"],
     },
     {
-      adult: false,
       backdrop_path: "/1pmXyN3sKeYoUhu5VBZiDU4BX21.jpg",
-      genre_ids: [16, 878, 10751],
       id: 1184918,
       original_language: "en",
       original_title: "The Wild Robot",
@@ -614,15 +592,12 @@ function setMovies() {
       poster_path: "/wTnV3PCVW5O92JMrFvvrRcV39RU.jpg",
       release_date: "2024-09-12",
       title: "The Wild Robot",
-      video: false,
       vote_average: 8.316,
       vote_count: 5348,
       genre: ["Animation", "Science Fiction", "Family"],
     },
     {
-      adult: false,
       backdrop_path: "/uB66OugiICp1lM5CMyUSqRifxWQ.jpg",
-      genre_ids: [16, 35, 14, 12, 10751],
       id: 1515395,
       original_language: "en",
       original_title: "Lego Disney Princess: Villains Unite",
@@ -632,15 +607,12 @@ function setMovies() {
       poster_path: "/ajcRSuv1rYbrDxnlNN5xx5H44Ft.jpg",
       release_date: "2025-08-24",
       title: "Lego Disney Princess: Villains Unite",
-      video: false,
       vote_average: 8.7,
       vote_count: 5,
       genre: ["Animation", "Comedy", "Fantasy", "Adventure", "Family"],
     },
     {
-      adult: false,
       backdrop_path: "/vbk5CfaAHOjQPSAcYm6AoRRz2Af.jpg",
-      genre_ids: [12, 14],
       id: 673,
       original_language: "en",
       original_title: "Harry Potter and the Prisoner of Azkaban",
@@ -650,15 +622,12 @@ function setMovies() {
       poster_path: "/aWxwnYoe8p2d2fcxOqtvAtJ72Rw.jpg",
       release_date: "2004-05-31",
       title: "Harry Potter and the Prisoner of Azkaban",
-      video: false,
       vote_average: 8.011,
       vote_count: 22386,
       genre: ["Adventure", "Fantasy"],
     },
     {
-      adult: false,
       backdrop_path: "/hZkgoQYus5vegHoetLkCJzb17zJ.jpg",
-      genre_ids: [18, 53],
       id: 550,
       original_language: "en",
       original_title: "Fight Club",
@@ -668,15 +637,12 @@ function setMovies() {
       poster_path: "/jSziioSwPVrOy9Yow3XhWIBDjq1.jpg",
       release_date: "1999-10-15",
       title: "Fight Club",
-      video: false,
       vote_average: 8.438,
       vote_count: 30741,
       genre: ["Drama", "Thriller"],
     },
     {
-      adult: false,
       backdrop_path: "/iHHWF01W2vNpjI8UzWh2F7tJEZp.jpg",
-      genre_ids: [28, 18],
       id: 1246369,
       original_language: "ja",
       original_title: "室町無頼",
@@ -686,15 +652,12 @@ function setMovies() {
       poster_path: "/apthwI5WmRT3cpiMg9sppEJ0PsN.jpg",
       release_date: "2025-01-17",
       title: "Samurai Fury",
-      video: false,
       vote_average: 8.8,
       vote_count: 11,
       genre: ["Action", "Drama"],
     },
     {
-      adult: false,
       backdrop_path: "/8K9qHeM6G6QjQN0C5XKFGvK5lzM.jpg",
-      genre_ids: [28, 878],
       id: 603,
       original_language: "en",
       original_title: "The Matrix",
@@ -704,15 +667,12 @@ function setMovies() {
       poster_path: "/p96dm7sCMn4VYAStA6siNz30G1r.jpg",
       release_date: "1999-03-31",
       title: "The Matrix",
-      video: false,
       vote_average: 8.232,
       vote_count: 26789,
       genre: ["Action", "Science Fiction"],
     },
     {
-      adult: false,
       backdrop_path: "/ukfI9QkU1aIhOhKXYWE9n3z1mFR.jpg",
-      genre_ids: [16, 10751, 14],
       id: 129,
       original_language: "ja",
       original_title: "千と千尋の神隠し",
@@ -722,15 +682,12 @@ function setMovies() {
       poster_path: "/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
       release_date: "2001-07-20",
       title: "Spirited Away",
-      video: false,
       vote_average: 8.535,
       vote_count: 17471,
       genre: ["Animation", "Family", "Fantasy"],
     },
     {
-      adult: false,
       backdrop_path: "/kVd3a9YeLGkoeR50jGEXM6EqseS.jpg",
-      genre_ids: [16, 28, 12, 878],
       id: 569094,
       original_language: "en",
       original_title: "Spider-Man: Across the Spider-Verse",
@@ -740,15 +697,12 @@ function setMovies() {
       poster_path: "/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
       release_date: "2023-05-31",
       title: "Spider-Man: Across the Spider-Verse",
-      video: false,
       vote_average: 8.3,
       vote_count: 7879,
       genre: ["Animation", "Action", "Adventure", "Science Fiction"],
     },
     {
-      adult: false,
       backdrop_path: "/mshaKLtPUxcDBhzau6qiObEblhL.jpg",
-      genre_ids: [12, 14, 28],
       id: 121,
       original_language: "en",
       original_title: "The Lord of the Rings: The Two Towers",
@@ -758,15 +712,12 @@ function setMovies() {
       poster_path: "/5VTN0pR8gcqV3EPUHHfMGnJYN9L.jpg",
       release_date: "2002-12-18",
       title: "The Lord of the Rings: The Two Towers",
-      video: false,
       vote_average: 8.409,
       vote_count: 22906,
       genre: ["Adventure", "Fantasy", "Action"],
     },
     {
-      adult: false,
       backdrop_path: "/n5A7brJCjejceZmHyujwUTVgQNC.jpg",
-      genre_ids: [14, 12],
       id: 12445,
       original_language: "en",
       original_title: "Harry Potter and the Deathly Hallows: Part 2",
@@ -776,15 +727,12 @@ function setMovies() {
       poster_path: "/c54HpQmuwXjHq2C9wmoACjxoom3.jpg",
       release_date: "2011-07-12",
       title: "Harry Potter and the Deathly Hallows: Part 2",
-      video: false,
       vote_average: 8.084,
       vote_count: 21276,
       genre: ["Fantasy", "Adventure"],
     },
     {
-      adult: false,
       backdrop_path: "/bF8eIIIJJoMZf2mFibAejqEGQcX.jpg",
-      genre_ids: [18, 10402],
       id: 244786,
       original_language: "en",
       original_title: "Whiplash",
@@ -794,15 +742,12 @@ function setMovies() {
       poster_path: "/7fn624j5lj3xTme2SgiLCeuedmO.jpg",
       release_date: "2014-10-10",
       title: "Whiplash",
-      video: false,
       vote_average: 8.376,
       vote_count: 15908,
       genre: ["Drama", "Music"],
     },
     {
-      adult: false,
       backdrop_path: "/hwNtEmmugU5Yd7hpfprNWI0DGIn.jpg",
-      genre_ids: [18, 53, 10752],
       id: 16869,
       original_language: "en",
       original_title: "Inglourious Basterds",
@@ -812,15 +757,12 @@ function setMovies() {
       poster_path: "/7sfbEnaARXDDhKm0CZ7D7uc2sbo.jpg",
       release_date: "2009-08-02",
       title: "Inglourious Basterds",
-      video: false,
       vote_average: 8.215,
       vote_count: 23200,
       genre: ["Drama", "Thriller", "War"],
     },
     {
-      adult: false,
       backdrop_path: "/rbZvGN1A1QyZuoKzhCw8QPmf2q0.jpg",
-      genre_ids: [18, 53, 9648],
       id: 11324,
       original_language: "en",
       original_title: "Shutter Island",
@@ -830,15 +772,12 @@ function setMovies() {
       poster_path: "/nrmXQ0zcZUL8jFLrakWc90IR8z9.jpg",
       release_date: "2010-02-14",
       title: "Shutter Island",
-      video: false,
       vote_average: 8.201,
       vote_count: 24872,
       genre: ["Drama", "Thriller", "Mystery"],
     },
     {
-      adult: false,
       backdrop_path: "/67HggiWaP9ZLv5sPYmyRV37yAJM.jpg",
-      genre_ids: [35, 18, 10749],
       id: 13,
       original_language: "en",
       original_title: "Forrest Gump",
@@ -848,15 +787,12 @@ function setMovies() {
       poster_path: "/arw2vcBveWOVZr6pxd9XTd1TdQa.jpg",
       release_date: "1994-06-23",
       title: "Forrest Gump",
-      video: false,
       vote_average: 8.5,
       vote_count: 28630,
       genre: ["Comedy", "Drama", "Romance"],
     },
     {
-      adult: false,
       backdrop_path: "/ku9p7ciLeuV1R8pqJGMgawaaVE8.jpg",
-      genre_ids: [16, 12, 14, 10751],
       id: 823219,
       original_language: "lv",
       original_title: "Straume",
@@ -866,15 +802,12 @@ function setMovies() {
       poster_path: "/imKSymKBK7o73sajciEmndJoVkR.jpg",
       release_date: "2024-08-29",
       title: "Flow",
-      video: false,
       vote_average: 8.2,
       vote_count: 2296,
       genre: ["Animation", "Adventure", "Fantasy", "Family"],
     },
     {
-      adult: false,
       backdrop_path: "/suaEOtk1N1sgg2MTM7oZd2cfVp3.jpg",
-      genre_ids: [53, 80, 35, 18],
       id: 680,
       original_language: "en",
       original_title: "Pulp Fiction",
@@ -884,15 +817,12 @@ function setMovies() {
       poster_path: "/vQWk5YBFWF4bZaofAbv0tShwBvQ.jpg",
       release_date: "1994-09-10",
       title: "Pulp Fiction",
-      video: false,
       vote_average: 8.487,
       vote_count: 29070,
       genre: ["Thriller", "Crime", "Comedy", "Drama"],
     },
     {
-      adult: false,
       backdrop_path: "/neeNHeXjMF5fXoCJRsOmkNGC7q.jpg",
-      genre_ids: [18, 36],
       id: 872585,
       original_language: "en",
       original_title: "Oppenheimer",
@@ -902,15 +832,12 @@ function setMovies() {
       poster_path: "/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
       release_date: "2023-07-19",
       title: "Oppenheimer",
-      video: false,
       vote_average: 8.05,
       vote_count: 10689,
       genre: ["Drama", "History"],
     },
     {
-      adult: false,
       backdrop_path: "/jr8tSoJGj33XLgFBy6lmZhpGQNu.jpg",
-      genre_ids: [16, 12, 14, 35, 10751],
       id: 315162,
       original_language: "en",
       original_title: "Puss in Boots: The Last Wish",
@@ -920,15 +847,12 @@ function setMovies() {
       poster_path: "/kuf6dutpsT0vSVehic3EZIqkOBt.jpg",
       release_date: "2022-12-07",
       title: "Puss in Boots: The Last Wish",
-      video: false,
       vote_average: 8.213,
       vote_count: 8393,
       genre: ["Animation", "Adventure", "Fantasy", "Comedy", "Family"],
     },
     {
-      adult: false,
       backdrop_path: "/kBSSbN1sOiJtXjAGVZXxHJR9Kox.jpg",
-      genre_ids: [28, 18],
       id: 361743,
       original_language: "en",
       original_title: "Top Gun: Maverick",
@@ -938,15 +862,12 @@ function setMovies() {
       poster_path: "/62HCnUTziyWcpDaBO2i1DX17ljH.jpg",
       release_date: "2022-05-21",
       title: "Top Gun: Maverick",
-      video: false,
       vote_average: 8.2,
       vote_count: 10177,
       genre: ["Action", "Drama"],
     },
     {
-      adult: false,
       backdrop_path: null,
-      genre_ids: [18],
       id: 202804,
       original_language: "de",
       original_title: "Leben mit Hannah",
@@ -956,15 +877,12 @@ function setMovies() {
       poster_path: "/ksiXmGN9DdNMCPnOU4BP9uDPaYF.jpg",
       release_date: "2007-09-06",
       title: "Hannah",
-      video: false,
       vote_average: 8,
       vote_count: 2,
       genre: ["Drama"],
     },
     {
-      adult: false,
       backdrop_path: "/fgyv2yZcG69KwcxnNRU7EtpKM4B.jpg",
-      genre_ids: [18],
       id: 687209,
       original_language: "ko",
       original_title: "여자 전쟁: 이사 온 남자",
@@ -974,15 +892,12 @@ function setMovies() {
       poster_path: "/6j4aU2E2utHNBec1EtnxYDediIS.jpg",
       release_date: "2016-10-17",
       title: "Female Wars: The Man Who Moved In",
-      video: false,
       vote_average: 10,
       vote_count: 1,
       genre: ["Drama"],
     },
     {
-      adult: false,
       backdrop_path: "/wXsQvli6tWqja51pYxXNG1LFIGV.jpg",
-      genre_ids: [10751, 16, 18, 14, 12],
       id: 8587,
       original_language: "en",
       original_title: "The Lion King",
@@ -992,15 +907,12 @@ function setMovies() {
       poster_path: "/sKCr78MXSLixwmZ8DyJLrpMsd15.jpg",
       release_date: "1994-06-15",
       title: "The Lion King",
-      video: false,
       vote_average: 8.256,
       vote_count: 19017,
       genre: ["Family", "Animation", "Drama", "Fantasy", "Adventure"],
     },
     {
-      adult: false,
       backdrop_path: "/yz8QL8WFD8yj0LA5zIlNOgcHvZK.jpg",
-      genre_ids: [12, 35, 878],
       id: 105,
       original_language: "en",
       original_title: "Back to the Future",
@@ -1010,15 +922,12 @@ function setMovies() {
       poster_path: "/vN5B5WgYscRGcQpVhHl6p9DDTP0.jpg",
       release_date: "1985-07-03",
       title: "Back to the Future",
-      video: false,
       vote_average: 8.321,
       vote_count: 20861,
       genre: ["Adventure", "Comedy", "Science Fiction"],
     },
     {
-      adult: false,
       backdrop_path: "/2w4xG178RpB4MDAIfTkqAuSJzec.jpg",
-      genre_ids: [12, 28, 878],
       id: 11,
       original_language: "en",
       original_title: "Star Wars",
@@ -1028,15 +937,12 @@ function setMovies() {
       poster_path: "/6FfCtAuVAW8XJjZ7eWeLibRLWTw.jpg",
       release_date: "1977-05-25",
       title: "Star Wars",
-      video: false,
       vote_average: 8.205,
       vote_count: 21480,
       genre: ["Adventure", "Action", "Science Fiction"],
     },
     {
-      adult: false,
       backdrop_path: "/tm87rqU4zCiDIJKJDHmmhFSjXiX.jpg",
-      genre_ids: [80, 28],
       id: 1468057,
       original_language: "zh",
       original_title: "角頭－鬥陣欸",
@@ -1045,15 +951,12 @@ function setMovies() {
       poster_path: "/tc5z5OADIYlOZLn0xNNM32c0Cq5.jpg",
       release_date: "2025-08-21",
       title: "GATAO: Big Brothers",
-      video: false,
       vote_average: 10,
       vote_count: 2,
       genre: ["Crime", "Action"],
     },
     {
-      adult: false,
       backdrop_path: "/jnFmHDHmPZrQ7vyHmxXHcoxp25j.jpg",
-      genre_ids: [53, 18, 10749],
       id: 290098,
       original_language: "ko",
       original_title: "아가씨",
@@ -1063,15 +966,12 @@ function setMovies() {
       poster_path: "/dLlH4aNHdnmf62umnInL8xPlPzw.jpg",
       release_date: "2016-06-01",
       title: "The Handmaiden",
-      video: false,
       vote_average: 8.2,
       vote_count: 4032,
       genre: ["Thriller", "Drama", "Romance"],
     },
     {
-      adult: false,
       backdrop_path: "/rVhoq70ZDDVfeoEPS312PcR5yLE.jpg",
-      genre_ids: [10749, 18, 35],
       id: 1290182,
       original_language: "ko",
       original_title: "그 시절, 우리가 좋아했던 소녀",
@@ -1081,15 +981,12 @@ function setMovies() {
       poster_path: "/dWJQe6HrnLQOZMwxIoahiswhiFx.jpg",
       release_date: "2025-02-21",
       title: "You Are the Apple of My Eye",
-      video: false,
       vote_average: 8.526,
       vote_count: 38,
       genre: ["Romance", "Drama", "Comedy"],
     },
     {
-      adult: false,
       backdrop_path: "/kGzFbGhp99zva6oZODW5atUtnqi.jpg",
-      genre_ids: [18, 80],
       id: 240,
       original_language: "en",
       original_title: "The Godfather Part II",
@@ -1099,15 +996,12 @@ function setMovies() {
       poster_path: "/hek3koDUyRQk7FIhPXsa6mT2Zc3.jpg",
       release_date: "1974-12-20",
       title: "The Godfather Part II",
-      video: false,
       vote_average: 8.57,
       vote_count: 13184,
       genre: ["Drama", "Crime"],
     },
     {
-      adult: false,
       backdrop_path: "/hpzQHv8cA7j2Dn2CphOFYmllXzj.jpg",
-      genre_ids: [18],
       id: 207,
       original_language: "en",
       original_title: "Dead Poets Society",
@@ -1117,15 +1011,12 @@ function setMovies() {
       poster_path: "/erzbMlcNHOdx24AXOcn2ZKA7R1q.jpg",
       release_date: "1989-06-02",
       title: "Dead Poets Society",
-      video: false,
       vote_average: 8.302,
       vote_count: 11905,
       genre: ["Drama"],
     },
     {
-      adult: false,
       backdrop_path: null,
-      genre_ids: [18],
       id: 913259,
       original_language: "ru",
       original_title: "Алиса",
@@ -1135,15 +1026,12 @@ function setMovies() {
       poster_path: "/kX7EIQiHmwhn8zY5PmLXBZg8qWS.jpg",
       release_date: "2021-12-12",
       title: "Alisa",
-      video: false,
       vote_average: 10,
       vote_count: 1,
       genre: ["Drama"],
     },
     {
-      adult: false,
       backdrop_path: "/6WRrGYalXXveItfpnipYdayFkQB.jpg",
-      genre_ids: [18, 53, 80],
       id: 1422,
       original_language: "en",
       original_title: "The Departed",
@@ -1153,15 +1041,12 @@ function setMovies() {
       poster_path: "/nT97ifVT2J1yMQmeq20Qblg61T.jpg",
       release_date: "2006-10-04",
       title: "The Departed",
-      video: false,
       vote_average: 8.159,
       vote_count: 15524,
       genre: ["Drama", "Thriller", "Crime"],
     },
     {
-      adult: false,
       backdrop_path: "/vxJ08SvwomfKbpboCWynC3uqUg4.jpg",
-      genre_ids: [14, 18, 80],
       id: 497,
       original_language: "en",
       original_title: "The Green Mile",
@@ -1171,15 +1056,12 @@ function setMovies() {
       poster_path: "/8VG8fDNiy50H4FedGwdSVUPoaJe.jpg",
       release_date: "1999-12-10",
       title: "The Green Mile",
-      video: false,
       vote_average: 8.504,
       vote_count: 18366,
       genre: ["Fantasy", "Drama", "Crime"],
     },
     {
-      adult: false,
       backdrop_path: "/rmiG2uwcNoGFmBKMoa1pIcf514L.jpg",
-      genre_ids: [35, 18],
       id: 37165,
       original_language: "en",
       original_title: "The Truman Show",
@@ -1189,15 +1071,12 @@ function setMovies() {
       poster_path: "/vuza0WqY239yBXOadKlGwJsZJFE.jpg",
       release_date: "1998-06-04",
       title: "The Truman Show",
-      video: false,
       vote_average: 8.149,
       vote_count: 19293,
       genre: ["Comedy", "Drama"],
     },
     {
-      adult: false,
       backdrop_path: "/sctvs9cUwJD15qlTlrsh2BXsK75.jpg",
-      genre_ids: [28, 80, 18],
       id: 111,
       original_language: "en",
       original_title: "Scarface",
@@ -1207,15 +1086,12 @@ function setMovies() {
       poster_path: "/iQ5ztdjvteGeboxtmRdXEChJOHh.jpg",
       release_date: "1983-12-09",
       title: "Scarface",
-      video: false,
       vote_average: 8.16,
       vote_count: 12447,
       genre: ["Action", "Crime", "Drama"],
     },
     {
-      adult: false,
       backdrop_path: "/3RFmTz5h2UuFWEV4oH00XICBR9y.jpg",
-      genre_ids: [18, 53, 80],
       id: 146233,
       original_language: "en",
       original_title: "Prisoners",
@@ -1225,15 +1101,12 @@ function setMovies() {
       poster_path: "/jsS3a3ep2KyBVmmiwaz3LvK49b1.jpg",
       release_date: "2013-09-19",
       title: "Prisoners",
-      video: false,
       vote_average: 8.099,
       vote_count: 12422,
       genre: ["Drama", "Thriller", "Crime"],
     },
     {
-      adult: false,
       backdrop_path: "/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg",
-      genre_ids: [12, 878, 28],
       id: 299534,
       original_language: "en",
       original_title: "Avengers: Endgame",
@@ -1243,15 +1116,12 @@ function setMovies() {
       poster_path: "/ulzhLuWrPK07P1YkdWQLZnQh1JL.jpg",
       release_date: "2019-04-24",
       title: "Avengers: Endgame",
-      video: false,
       vote_average: 8.237,
       vote_count: 26714,
       genre: ["Adventure", "Science Fiction", "Action"],
     },
     {
-      adult: false,
       backdrop_path: "/gl0jzn4BupSbL2qMVeqrjKkF9Js.jpg",
-      genre_ids: [12, 14, 16],
       id: 128,
       original_language: "ja",
       original_title: "もののけ姫",
@@ -1261,15 +1131,12 @@ function setMovies() {
       poster_path: "/cMYCDADoLKLbB83g4WnJegaZimC.jpg",
       release_date: "1997-07-12",
       title: "Princess Mononoke",
-      video: false,
       vote_average: 8.327,
       vote_count: 8521,
       genre: ["Adventure", "Fantasy", "Animation"],
     },
     {
-      adult: false,
       backdrop_path: "/AmR3JG1VQVxU8TfAvljUhfSFUOx.jpg",
-      genre_ids: [27, 878],
       id: 348,
       original_language: "en",
       original_title: "Alien",
@@ -1279,15 +1146,12 @@ function setMovies() {
       poster_path: "/vfrQk5IPloGg1v9Rzbh2Eg3VGyM.jpg",
       release_date: "1979-05-25",
       title: "Alien",
-      video: false,
       vote_average: 8.164,
       vote_count: 15584,
       genre: ["Horror", "Science Fiction"],
     },
     {
-      adult: false,
       backdrop_path: "/yCnJT53HMXAK87xzPAdjdYhZ3JE.jpg",
-      genre_ids: [18, 9648, 878],
       id: 1124,
       original_language: "en",
       original_title: "The Prestige",
@@ -1297,15 +1161,12 @@ function setMovies() {
       poster_path: "/2ZOzyhoW08neG27DVySMCcq2emd.jpg",
       release_date: "2006-10-17",
       title: "The Prestige",
-      video: false,
       vote_average: 8.204,
       vote_count: 16790,
       genre: ["Drama", "Mystery", "Science Fiction"],
     },
     {
-      adult: false,
       backdrop_path: "/o869RihWTdTyBcEZBjz0izvEsVf.jpg",
-      genre_ids: [878, 12],
       id: 693134,
       original_language: "en",
       original_title: "Dune: Part Two",
@@ -1315,15 +1176,12 @@ function setMovies() {
       poster_path: "/6izwz7rsy95ARzTR3poZ8H6c5pp.jpg",
       release_date: "2024-02-27",
       title: "Dune: Part Two",
-      video: false,
       vote_average: 8.137,
       vote_count: 7027,
       genre: ["Science Fiction", "Adventure"],
     },
     {
-      adult: false,
       backdrop_path: "/oLsts7ct0NVkdYpx5rZg10MG6zh.jpg",
-      genre_ids: [18],
       id: 489,
       original_language: "en",
       original_title: "Good Will Hunting",
@@ -1333,15 +1191,12 @@ function setMovies() {
       poster_path: "/z2FnLKpFi1HPO7BEJxdkv6hpJSU.jpg",
       release_date: "1997-12-05",
       title: "Good Will Hunting",
-      video: false,
       vote_average: 8.157,
       vote_count: 13088,
       genre: ["Drama"],
     },
     {
-      adult: false,
       backdrop_path: "/bxgTSUenZDHNFerQ1whRKplrMKF.jpg",
-      genre_ids: [18],
       id: 389,
       original_language: "en",
       original_title: "12 Angry Men",
@@ -1351,15 +1206,12 @@ function setMovies() {
       poster_path: "/ow3wq89wM8qd5X7hWKxiRfsFf9C.jpg",
       release_date: "1957-04-10",
       title: "12 Angry Men",
-      video: false,
       vote_average: 8.549,
       vote_count: 9392,
       genre: ["Drama"],
     },
     {
-      adult: false,
       backdrop_path: "/w5IDXtifKntw0ajv2co7jFlTQDM.jpg",
-      genre_ids: [878, 9648, 12],
       id: 62,
       original_language: "en",
       original_title: "2001: A Space Odyssey",
@@ -1369,15 +1221,12 @@ function setMovies() {
       poster_path: "/ve72VxNqjGM69Uky4WTo2bK6rfq.jpg",
       release_date: "1968-04-02",
       title: "2001: A Space Odyssey",
-      video: false,
       vote_average: 8.1,
       vote_count: 12021,
       genre: ["Science Fiction", "Mystery", "Adventure"],
     },
     {
-      adult: false,
       backdrop_path: "/vINgGecnz95iDL6fjQMARDsocgG.jpg",
-      genre_ids: [28, 53, 878],
       id: 280,
       original_language: "en",
       original_title: "Terminator 2: Judgment Day",
@@ -1387,15 +1236,12 @@ function setMovies() {
       poster_path: "/weVXMD5QBGeQil4HEATZqAkXeEc.jpg",
       release_date: "1991-07-03",
       title: "Terminator 2: Judgment Day",
-      video: false,
       vote_average: 8.1,
       vote_count: 13557,
       genre: ["Action", "Thriller", "Science Fiction"],
     },
     {
-      adult: false,
       backdrop_path: "/8mnXR9rey5uQ08rZAvzojKWbDQS.jpg",
-      genre_ids: [16, 28, 12, 878],
       id: 324857,
       original_language: "en",
       original_title: "Spider-Man: Into the Spider-Verse",
@@ -1405,15 +1251,12 @@ function setMovies() {
       poster_path: "/iiZZdoQBEYBv6id8su7ImL0oCbD.jpg",
       release_date: "2018-12-06",
       title: "Spider-Man: Into the Spider-Verse",
-      video: false,
       vote_average: 8.4,
       vote_count: 16431,
       genre: ["Animation", "Action", "Adventure", "Science Fiction"],
     },
     {
-      adult: false,
       backdrop_path: "/nv5wwZou159v5OC61i4ElR7OqyY.jpg",
-      genre_ids: [14, 16, 12],
       id: 4935,
       original_language: "ja",
       original_title: "ハウルの動く城",
@@ -1423,15 +1266,12 @@ function setMovies() {
       poster_path: "/TkTPELv4kC3u1lkloush8skOjE.jpg",
       release_date: "2004-09-09",
       title: "Howl's Moving Castle",
-      video: false,
       vote_average: 8.397,
       vote_count: 10512,
       genre: ["Fantasy", "Animation", "Adventure"],
     },
     {
-      adult: false,
       backdrop_path: "/8x9iKH8kWA0zdkgNdpAew7OstYe.jpg",
-      genre_ids: [16, 10749, 18],
       id: 372058,
       original_language: "ja",
       original_title: "君の名は。",
@@ -1441,15 +1281,12 @@ function setMovies() {
       poster_path: "/q719jXXEzOoYaps6babgKnONONX.jpg",
       release_date: "2016-08-26",
       title: "Your Name.",
-      video: false,
       vote_average: 8.479,
       vote_count: 11980,
       genre: ["Animation", "Romance", "Drama"],
     },
     {
-      adult: false,
       backdrop_path: "/vDKRMZGFTKP9nQolzeSB1rB1w6p.jpg",
-      genre_ids: [18, 36, 10752],
       id: 324786,
       original_language: "en",
       original_title: "Hacksaw Ridge",
@@ -1459,15 +1296,12 @@ function setMovies() {
       poster_path: "/wuz8TjCIWR2EVVMuEfBnQ1vuGS3.jpg",
       release_date: "2016-10-07",
       title: "Hacksaw Ridge",
-      video: false,
       vote_average: 8.193,
       vote_count: 14307,
       genre: ["Drama", "History", "War"],
     },
     {
-      adult: false,
       backdrop_path: "/6aoyUbvu0419XLKLIMoH0TkEicH.jpg",
-      genre_ids: [80, 18],
       id: 103,
       original_language: "en",
       original_title: "Taxi Driver",
@@ -1477,15 +1311,12 @@ function setMovies() {
       poster_path: "/ekstpH614fwDX8DUln1a2Opz0N8.jpg",
       release_date: "1976-02-09",
       title: "Taxi Driver",
-      video: false,
       vote_average: 8.135,
       vote_count: 12862,
       genre: ["Crime", "Drama"],
     },
     {
-      adult: false,
       backdrop_path: "/744ybMaYRry1IQKoDakMc4GEU4L.jpg",
-      genre_ids: [878, 18, 10749],
       id: 38,
       original_language: "en",
       original_title: "Eternal Sunshine of the Spotless Mind",
@@ -1495,15 +1326,12 @@ function setMovies() {
       poster_path: "/5MwkWH9tYHv3mV9OdYTMR5qreIz.jpg",
       release_date: "2004-03-19",
       title: "Eternal Sunshine of the Spotless Mind",
-      video: false,
       vote_average: 8.1,
       vote_count: 15677,
       genre: ["Science Fiction", "Drama", "Romance"],
     },
     {
-      adult: false,
       backdrop_path: "/rW2xRFlJRbTnBJlQTSjQmjevIwb.jpg",
-      genre_ids: [18, 36, 10752],
       id: 857,
       original_language: "en",
       original_title: "Saving Private Ryan",
@@ -1513,15 +1341,12 @@ function setMovies() {
       poster_path: "/uqx37cS8cpHg8U35f9U5IBlrCV3.jpg",
       release_date: "1998-07-24",
       title: "Saving Private Ryan",
-      video: false,
       vote_average: 8.22,
       vote_count: 16514,
       genre: ["Drama", "History", "War"],
     },
     {
-      adult: false,
       backdrop_path: "/zb6fM1CX41D9rF9hdgclu0peUmy.jpg",
-      genre_ids: [18, 36, 10752],
       id: 424,
       original_language: "en",
       original_title: "Schindler's List",
@@ -1531,15 +1356,12 @@ function setMovies() {
       poster_path: "/sF1U4EUQS8YHUYjNl3pMGNIQyr0.jpg",
       release_date: "1993-12-15",
       title: "Schindler's List",
-      video: false,
       vote_average: 8.566,
       vote_count: 16699,
       genre: ["Drama", "History", "War"],
     },
     {
-      adult: false,
       backdrop_path: "/jhk6D8pim3yaByu1801kMoxXFaX.jpg",
-      genre_ids: [28, 18, 12],
       id: 98,
       original_language: "en",
       original_title: "Gladiator",
@@ -1549,15 +1371,12 @@ function setMovies() {
       poster_path: "/ty8TGRuvJLPUmAR1H1nRIsgwvim.jpg",
       release_date: "2000-05-04",
       title: "Gladiator",
-      video: false,
       vote_average: 8.22,
       vote_count: 20048,
       genre: ["Action", "Drama", "Adventure"],
     },
     {
-      adult: false,
       backdrop_path: "/13Nz8EchKRdCgJcKdEoJAnpiVn2.jpg",
-      genre_ids: [28, 12, 14],
       id: 791373,
       original_language: "en",
       original_title: "Zack Snyder's Justice League",
@@ -1567,15 +1386,12 @@ function setMovies() {
       poster_path: "/tnAuB8q5vv7Ax9UAEje5Xi4BXik.jpg",
       release_date: "2021-03-18",
       title: "Zack Snyder's Justice League",
-      video: false,
       vote_average: 8.11,
       vote_count: 10397,
       genre: ["Action", "Adventure", "Fantasy"],
     },
     {
-      adult: false,
       backdrop_path: "/n2eUT4zQA2yYcKOgAFidgOyiFoH.jpg",
-      genre_ids: [18, 37],
       id: 68718,
       original_language: "en",
       original_title: "Django Unchained",
@@ -1585,15 +1401,12 @@ function setMovies() {
       poster_path: "/7oWY8VDWW7thTzWh3OKYRkWUlD5.jpg",
       release_date: "2012-12-25",
       title: "Django Unchained",
-      video: false,
       vote_average: 8.184,
       vote_count: 27054,
       genre: ["Drama", "Western"],
     },
     {
-      adult: false,
       backdrop_path: "/eG8wN73Ma8AwvXtqIHdMXkaVevq.jpg",
-      genre_ids: [16, 35, 10749, 18],
       id: 1362429,
       original_language: "ja",
       original_title: "映画 先輩はおとこのこ あめのち晴れ",
@@ -1603,15 +1416,12 @@ function setMovies() {
       poster_path: "/qOCnr7MNK3jbWcLFusveOd2wsIe.jpg",
       release_date: "2025-02-14",
       title: "Senpai Is an Otokonoko Movie: Sunshine After the Rain",
-      video: false,
       vote_average: 10,
       vote_count: 1,
       genre: ["Animation", "Comedy", "Romance", "Drama"],
     },
     {
-      adult: false,
       backdrop_path: "/2ha0wAOqrUcLScStWQcgeOOXapQ.jpg",
-      genre_ids: [10749, 14, 18],
       id: 1241921,
       original_language: "en",
       original_title: "A Big Bold Beautiful Journey",
@@ -1621,15 +1431,12 @@ function setMovies() {
       poster_path: "/dYm4Ah0UAgBHkYEPZIhuhkzl6ue.jpg",
       release_date: "2025-09-17",
       title: "A Big Bold Beautiful Journey",
-      video: false,
       vote_average: 9,
       vote_count: 2,
       genre: ["Romance", "Fantasy", "Drama"],
     },
     {
-      adult: false,
       backdrop_path: "/sw7mordbZxgITU877yTpZCud90M.jpg",
-      genre_ids: [18, 80],
       id: 769,
       original_language: "en",
       original_title: "GoodFellas",
@@ -1639,15 +1446,12 @@ function setMovies() {
       poster_path: "/aKuFiU82s5ISJpGZp7YkIr3kCUd.jpg",
       release_date: "1990-09-12",
       title: "GoodFellas",
-      video: false,
       vote_average: 8.455,
       vote_count: 13624,
       genre: ["Drama", "Crime"],
     },
     {
-      adult: false,
       backdrop_path: null,
-      genre_ids: [18, 10749],
       id: 1135869,
       original_language: "ho",
       original_title: "Kelas Bintang - Salome",
@@ -1656,15 +1460,12 @@ function setMovies() {
       poster_path: "/9R94k6pMdLWHwzxSSlKVrPo0EE3.jpg",
       release_date: "2023-05-13",
       title: "Salome",
-      video: false,
       vote_average: 10,
       vote_count: 2,
       genre: ["Drama", "Romance"],
     },
     {
-      adult: false,
       backdrop_path: "/eohMDv8x1XRSkPdjWv5xsFct4Dj.jpg",
-      genre_ids: [80, 53],
       id: 500,
       original_language: "en",
       original_title: "Reservoir Dogs",
@@ -1674,15 +1475,12 @@ function setMovies() {
       poster_path: "/xi8Iu6qyTfyZVDVy60raIOYJJmk.jpg",
       release_date: "1992-09-02",
       title: "Reservoir Dogs",
-      video: false,
       vote_average: 8.118,
       vote_count: 14839,
       genre: ["Crime", "Thriller"],
     },
     {
-      adult: false,
       backdrop_path: "/gZWl93sf8AxavYpVT1Un6EF3oCj.jpg",
-      genre_ids: [80, 53, 18],
       id: 475557,
       original_language: "en",
       original_title: "Joker",
@@ -1692,15 +1490,12 @@ function setMovies() {
       poster_path: "/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg",
       release_date: "2019-10-01",
       title: "Joker",
-      video: false,
       vote_average: 8.133,
       vote_count: 26793,
       genre: ["Crime", "Thriller", "Drama"],
     },
     {
-      adult: false,
       backdrop_path: "/jynfI114q3kOAbIiVjVfFFmttU2.jpg",
-      genre_ids: [80, 18, 28],
       id: 101,
       original_language: "fr",
       original_title: "Léon",
@@ -1710,15 +1505,12 @@ function setMovies() {
       poster_path: "/bxB2q91nKYp8JNzqE7t7TWBVupB.jpg",
       release_date: "1994-09-14",
       title: "Léon: The Professional",
-      video: false,
       vote_average: 8.301,
       vote_count: 15445,
       genre: ["Crime", "Drama", "Action"],
     },
     {
-      adult: false,
       backdrop_path: "/iyHqd29vWF8ZRrQOO5KYEHLTtfG.jpg",
-      genre_ids: [18, 878],
       id: 1319700,
       original_language: "ja",
       original_title: "本心",
@@ -1728,15 +1520,12 @@ function setMovies() {
       poster_path: "/mCUkFIuEnVlkvDqGgN3gpZkH9Pr.jpg",
       release_date: "2024-11-08",
       title: "The Real You",
-      video: false,
       vote_average: 8.5,
       vote_count: 4,
       genre: ["Drama", "Science Fiction"],
     },
     {
-      adult: false,
       backdrop_path: "/ai2FicMUxLCurVkjtYdSvVDWRmS.jpg",
-      genre_ids: [16, 10751, 878],
       id: 10681,
       original_language: "en",
       original_title: "WALL·E",
@@ -1746,15 +1535,12 @@ function setMovies() {
       poster_path: "/hbhFnRzzg6ZDmm8YAmxBnQpQIPh.jpg",
       release_date: "2008-06-22",
       title: "WALL·E",
-      video: false,
       vote_average: 8.102,
       vote_count: 19502,
       genre: ["Animation", "Family", "Science Fiction"],
     },
     {
-      adult: false,
       backdrop_path: "/2vq5GTJOahE03mNYZGxIynlHcWr.jpg",
-      genre_ids: [18, 28, 36],
       id: 359724,
       original_language: "en",
       original_title: "Ford v Ferrari",
@@ -1764,15 +1550,12 @@ function setMovies() {
       poster_path: "/dR1Ju50iudrOh3YgfwkAU1g2HZe.jpg",
       release_date: "2019-11-13",
       title: "Ford v Ferrari",
-      video: false,
       vote_average: 8.007,
       vote_count: 8489,
       genre: ["Drama", "Action", "History"],
     },
     {
-      adult: false,
       backdrop_path: "/x4biAVdPVCghBlsVIzB6NmbghIz.jpg",
-      genre_ids: [37],
       id: 429,
       original_language: "it",
       original_title: "Il buono, il brutto, il cattivo",
@@ -1782,15 +1565,12 @@ function setMovies() {
       poster_path: "/bX2xnavhMYjWDoZp1VM6VnU1xwe.jpg",
       release_date: "1966-12-22",
       title: "The Good, the Bad and the Ugly",
-      video: false,
       vote_average: 8.465,
       vote_count: 9165,
       genre: ["Western"],
     },
     {
-      adult: false,
       backdrop_path: null,
-      genre_ids: [],
       id: 860410,
       original_language: "zh",
       original_title: "수리기사의 참교육",
@@ -1800,15 +1580,12 @@ function setMovies() {
       poster_path: "/faJskm5nNutoxfORCtODQewzKDL.jpg",
       release_date: "2017-01-01",
       title: "Asebamu Akahadaka Tsuma",
-      video: false,
       vote_average: 10,
       vote_count: 1,
       genre: [],
     },
     {
-      adult: false,
       backdrop_path: "/q6OGlZ1KMEb14AC8KbPCxyNOal6.jpg",
-      genre_ids: [18, 35],
       id: 77338,
       original_language: "fr",
       original_title: "Intouchables",
@@ -1818,15 +1595,12 @@ function setMovies() {
       poster_path: "/1QU7HKgsQbGpzsJbJK4pAVQV9F5.jpg",
       release_date: "2011-11-02",
       title: "The Intouchables",
-      video: false,
       vote_average: 8.272,
       vote_count: 17841,
       genre: ["Drama", "Comedy"],
     },
     {
-      adult: false,
       backdrop_path: "/zViRwl3ySscZnbXZJ2Q9wq3SeUG.jpg",
-      genre_ids: [16, 878, 12, 10751],
       id: 698687,
       original_language: "en",
       original_title: "Transformers One",
@@ -1836,15 +1610,12 @@ function setMovies() {
       poster_path: "/iRCgqpdVE4wyLQvGYU3ZP7pAtUc.jpg",
       release_date: "2024-09-11",
       title: "Transformers One",
-      video: false,
       vote_average: 8,
       vote_count: 1378,
       genre: ["Animation", "Science Fiction", "Adventure", "Family"],
     },
     {
-      adult: false,
       backdrop_path: "/9jrHaaXWB37VcA4KGemP8iF7bFB.jpg",
-      genre_ids: [18, 80, 53],
       id: 629,
       original_language: "en",
       original_title: "The Usual Suspects",
@@ -1854,15 +1625,12 @@ function setMovies() {
       poster_path: "/99X2SgyFunJFXGAYnDv3sb9pnUD.jpg",
       release_date: "1995-07-19",
       title: "The Usual Suspects",
-      video: false,
       vote_average: 8.2,
       vote_count: 10858,
       genre: ["Drama", "Crime", "Thriller"],
     },
     {
-      adult: false,
       backdrop_path: "/wQql3wQLO7RQBNDeGKUE91cYNld.jpg",
-      genre_ids: [18, 14],
       id: 1531023,
       original_language: "tl",
       original_title: "Bulong Ng Laman",
@@ -1872,15 +1640,12 @@ function setMovies() {
       poster_path: "/ta7JKGq0jhx2xJPrUw8yXheJaOf.jpg",
       release_date: "2025-09-02",
       title: "Bulong Ng Laman",
-      video: false,
       vote_average: 9,
       vote_count: 2,
       genre: ["Drama", "Fantasy"],
     },
     {
-      adult: false,
       backdrop_path: "/rfkIeCaIHhN3K5wjJJqKmfUjYp8.jpg",
-      genre_ids: [18, 36],
       id: 381284,
       original_language: "en",
       original_title: "Hidden Figures",
@@ -1890,7 +1655,6 @@ function setMovies() {
       poster_path: "/9lfz2W2uGjyow3am00rsPJ8iOyq.jpg",
       release_date: "2016-12-10",
       title: "Hidden Figures",
-      video: false,
       vote_average: 8.052,
       vote_count: 10079,
       genre: ["Drama", "History"],
