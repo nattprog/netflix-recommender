@@ -1,0 +1,1663 @@
+// create variable initialised to empty object
+let MOVIES = {};
+// set movies object containing movie data to variable
+setMovies();
+
+// IIFE to run the program
+(() => {
+  // select the parent element that will contain the search results
+  const main = document.querySelector("#search-results");
+
+  // handle errors in loading movies from data
+  try {
+    // generate the html containing the movie data
+    addMoviesFromData(main);
+  } catch (error) {
+    console.log(error);
+    alert(
+      "Error encountered in loading movies. Please try refreshing the page."
+    );
+  }
+
+  // handle errors in refreshing the page
+  try {
+    // add event listeners to react to changes in the filters in real time
+    addInputEventListener();
+  } catch (error) {
+    console.log(error);
+    alert(
+      "Error encountered in adding event listeners. Please try refreshing the page."
+    );
+  }
+})();
+
+// function to load movie data and create html content
+function addMoviesFromData(parentElement) {
+  // get the template stored in the html
+  let template = document.getElementById("movie-template");
+  // create a document to append new content to without interfering with the main document object
+  let fragment = document.createDocumentFragment();
+  // iterate through each movie
+  MOVIES.forEach((movie) => {
+    // clone the template, one for each movie
+    let html = template.content.cloneNode(true);
+
+    // populate the cloned html elements with movie data
+    // use conditional assignment in the form of
+    // = (if case true) ? (then this) : (else this)
+    // to make sure all missing data is handled gracefully
+    let details = html.querySelector("details.movie");
+    details.setAttribute("data-ref", movie.id);
+    html.querySelector("strong.movie__title").textContent = movie.title;
+    let img = html.querySelector("img.movie__poster");
+    img.alt = `Poster for ${movie.title}`;
+    img.src = movie.poster_path
+      ? `https://image.tmdb.org/t/p/original${movie.poster_path}`
+      : "https://cdn.pixabay.com/photo/2017/02/12/21/29/false-2061132_1280.png"; // show error image
+    html.querySelector("span.movie__release").textContent = movie.release_date
+      ? movie.release_date
+      : "Release date available";
+    html.querySelector("span.movie__rating").textContent = movie.vote_average
+      ? movie.vote_average
+      : "Vote average unavailable";
+    html.querySelector("span.movie__genre").textContent = movie.genre
+      ? movie.genre
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .join(" ")
+      : "Genres unavailable";
+    html.querySelector("span.movie__overview").textContent = movie.overview
+      ? movie.overview
+      : "Overview unavailable";
+    html.querySelector("a.movie__imdb").href =
+      movie.title && movie.release_date
+        ? `https://www.imdb.com/find/?q=${
+            movie.title
+          } ${movie.release_date.slice(0, 4)}&s=tt&ttype=ft&exact=true&`
+        : "";
+
+    // append the movie to the fragment
+    fragment.append(details);
+  });
+  // finally, append all the movies to the document object (and render it)
+  parentElement.append(fragment);
+}
+
+// Function to add event listeners to the form
+function addInputEventListener() {
+  // select the form with all the filters
+  let searchForm = document.querySelector("#search-form");
+  // add a listener to detect all changes of the form's values, such as search or genre filters
+  searchForm.addEventListener("input", (event) => {
+    event.stopPropagation();
+    handleInput();
+  });
+  // customize the reset button's functionality in order to add the ability to refresh all the movies displayed after resetting
+  searchForm.addEventListener("reset", handleReset);
+}
+
+// Function to handle changing of values in the form
+function handleInput() {
+  // get all the form input elements' values
+  let snippetSearch = document
+    .querySelector("#movie-search")
+    .value.toLowerCase();
+  let ratingThreshold = parseFloat(
+    document.querySelector("#movie-search-rating").value
+  );
+  let genreSelect1 = document.querySelector("#movie-search-genre1").value;
+  let genreSelect2 = document.querySelector("#movie-search-genre2").value;
+  let genreSelect3 = document.querySelector("#movie-search-genre3").value;
+  let releasedAfter = document.querySelector(
+    "#movie-search-release-after"
+  ).value;
+  let releasedBefore = document.querySelector(
+    "#movie-search-release-before"
+  ).value;
+
+  // iterate through each movie and show or hide according to whether the filters allow it
+  let details = document.querySelectorAll("details");
+  details.forEach((detail) => {
+    // close the dropdown of each movie
+    detail.removeAttribute("open");
+
+    // get the movie's details to sort by
+    let summary = detail.querySelector("summary");
+    let summaryText = summary.innerText.toLowerCase();
+    let rating = detail.querySelector(".movie__rating").textContent;
+    let genre = detail.querySelector(".movie__genre").textContent;
+    let release = detail.querySelector(".movie__release").textContent;
+
+    // match cases for filtering
+    let BoolBadMatch = false;
+    // filter out unmatches for title
+    if (!summaryText.includes(snippetSearch)) {
+      // if the title does not contain the search term, the bad match flag is set to true resulting in the movie being hidden
+      BoolBadMatch = true;
+    } //filter out unmatches for rating
+    else if (rating < ratingThreshold) {
+      // bad match if the rating is less than threshold
+      BoolBadMatch = true;
+    } //filter out unmatches for genre
+    else if (
+      !genre.includes(genreSelect1) ||
+      !genre.includes(genreSelect2) ||
+      !genre.includes(genreSelect3)
+    ) {
+      // bad match if movie's genres does not contain all of the selected genres
+      BoolBadMatch = true;
+    }
+    // filter out unmatches for dates
+    if (releasedAfter) {
+      const after = new Date(releasedAfter);
+      const rel = new Date(release);
+      if (after > rel) {
+        // bad match if movie released before the selected date
+        BoolBadMatch = true;
+      }
+    }
+    if (releasedBefore) {
+      const before = new Date(releasedBefore);
+      const rel = new Date(release);
+      if (before < rel) {
+        // bad match if movie released after the selected date
+        BoolBadMatch = true;
+      }
+    }
+
+    // hide or show the movie in the results according to whether the bad match was set to true in any of the filters
+    if (BoolBadMatch) {
+      detail.classList.add("hidden");
+    } else {
+      detail.classList.remove("hidden");
+    }
+  });
+}
+
+function handleReset(event) {
+  // reset all the form's values
+  event.stopPropagation();
+  event.preventDefault();
+  document.querySelector("#movie-search").value = "";
+  document.querySelector("#movie-search-rating").value = 0;
+  document.querySelector("#movie-search-genre1").value = "";
+  document.querySelector("#movie-search-genre2").value = "";
+  document.querySelector("#movie-search-genre3").value = "";
+  document.querySelector("#movie-search-release-after").value = "";
+  document.querySelector("#movie-search-release-before").value = "";
+
+  // run the hiding/showing of movies to reset results
+  handleInput();
+}
+
+// check movie-search-rating value stays between 0 and 10
+const ratingInput = document.getElementById("movie-search-rating");
+
+ratingInput.addEventListener("input", function () {
+  let value = Number(ratingInput.value);
+  if (value < 0) {
+    ratingInput.value = 0;
+  } else if (value > 10) {
+    ratingInput.value = 10;
+  }
+});
+
+// function to set movie data to MOVIES variable
+function setMovies() {
+  // NOTE: Movie data is taken from TheMovieDB API, via API requests.
+  // e.g. https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&page=1&sort_by=popularity.desc&vote_average.gte=8&page=1
+  MOVIES = [
+    {
+      backdrop_path: "/w3Bi0wygeFQctn6AqFTwhGNXRwL.jpg",
+      id: 803796,
+      original_language: "en",
+      original_title: "KPop Demon Hunters",
+      overview:
+        "When K-pop superstars Rumi, Mira and Zoey aren't selling out stadiums, they're using their secret powers to protect their fans from supernatural threats.",
+      popularity: 162.0916,
+      poster_path: "/22AouvwlhlXbe3nrFcjzL24bvWH.jpg",
+      release_date: "2025-06-20",
+      title: "KPop Demon Hunters",
+      vote_average: 8.331,
+      vote_count: 1390,
+      genre: ["Animation", "Comedy", "Fantasy", "Music"],
+    },
+    {
+      backdrop_path: "/vHTFrcqJoCi1is3XN0PZe2LSnI2.jpg",
+      id: 1087192,
+      original_language: "en",
+      original_title: "How to Train Your Dragon",
+      overview:
+        "On the rugged isle of Berk, where Vikings and dragons have been bitter enemies for generations, Hiccup stands apart, defying centuries of tradition when he befriends Toothless, a feared Night Fury dragon. Their unlikely bond reveals the true nature of dragons, challenging the very foundations of Viking society.",
+      popularity: 160.4355,
+      poster_path: "/q5pXRYTycaeW6dEgsCrd4mYPmxM.jpg",
+      release_date: "2025-06-06",
+      title: "How to Train Your Dragon",
+      vote_average: 8.033,
+      vote_count: 1897,
+      genre: ["Fantasy", "Family", "Action", "Adventure"],
+    },
+    {
+      backdrop_path: null,
+      id: 1100842,
+      original_language: "ja",
+      original_title: "新婚シリーズ　最初が肝心",
+      overview: "1962 Japanese movie",
+      popularity: 96.4161,
+      poster_path: "/f52F9CBy6nY5vmOv07FMsexyVpJ.jpg",
+      release_date: "1962-02-07",
+      title: "新婚シリーズ　最初が肝心",
+      vote_average: 10,
+      vote_count: 1,
+      genre: [],
+    },
+    {
+      backdrop_path: "/zxi6WQPVc0uQAG5TtLsKvxYHApC.jpg",
+      id: 980477,
+      original_language: "zh",
+      original_title: "哪吒之魔童闹海",
+      overview:
+        "After a catastrophic event leaves their bodies destroyed, Ne Zha and Ao Bing are granted a fragile second chance at life. As tensions rise between the dragon clans and celestial forces, the two must undergo a series of perilous trials that will test their bond, challenge their identities, and decide the fate of both mortals and immortals.",
+      popularity: 72.391,
+      poster_path: "/cb5NyNrqiCNNoDkA8FfxHAtypdG.jpg",
+      release_date: "2025-01-29",
+      title: "Ne Zha 2",
+      vote_average: 8.067,
+      vote_count: 359,
+      genre: ["Animation", "Fantasy", "Adventure", "Action"],
+    },
+    {
+      backdrop_path: "/vgnoBSVzWAV9sNQUORaDGvDp7wx.jpg",
+      id: 157336,
+      original_language: "en",
+      original_title: "Interstellar",
+      overview:
+        "The adventures of a group of explorers who make use of a newly discovered wormhole to surpass the limitations on human space travel and conquer the vast distances involved in an interstellar voyage.",
+      popularity: 62.6115,
+      poster_path: "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
+      release_date: "2014-11-05",
+      title: "Interstellar",
+      vote_average: 8.46,
+      vote_count: 37844,
+      genre: ["Adventure", "Drama", "Science Fiction"],
+    },
+    {
+      backdrop_path: "/oBcvmHD7lbaX8RZ7NXvO05fIJef.jpg",
+      id: 1355666,
+      original_language: "ko",
+      original_title: "고백의 역사",
+      overview:
+        "A lovestruck teen plans to win the school heartthrob by going from curly to straight hair — until a new transfer student changes everything.",
+      popularity: 52.4384,
+      poster_path: "/e7jStO2xfBUAUK37LbINHd1qtgy.jpg",
+      release_date: "2025-08-28",
+      title: "Love Untangled",
+      vote_average: 8.539,
+      vote_count: 77,
+      genre: ["Romance", "Drama", "Comedy"],
+    },
+    {
+      backdrop_path: "/oYPm2zk8fBxm3UBEiaWMzUGHeFW.jpg",
+      id: 1428213,
+      original_language: "tl",
+      original_title: "Kontrabida Academy",
+      overview:
+        "When a mysterious TV transports her to a school for on-screen villains, a restaurant worker finds new purpose — and a way to get back at her enemies.",
+      popularity: 51.8227,
+      poster_path: "/uiW2ff73RZzPABKtnjW5wmt43CU.jpg",
+      release_date: "2025-09-10",
+      title: "Kontrabida Academy",
+      vote_average: 8.1,
+      vote_count: 5,
+      genre: ["Comedy", "Fantasy"],
+    },
+    {
+      backdrop_path: null,
+      id: 1140142,
+      original_language: "ja",
+      original_title: "やくざ囃子",
+      overview: "Makino Masahiro film starring Okada Mariko",
+      popularity: 51.3817,
+      poster_path: "/1pOfALcXkc5yU2FPTwmMBnXUQK.jpg",
+      release_date: "1954-06-30",
+      title: "Yakuza bayashi",
+      vote_average: 10,
+      vote_count: 1,
+      genre: [],
+    },
+    {
+      backdrop_path: null,
+      id: 846817,
+      original_language: "ar",
+      original_title: "ليل",
+      overview:
+        "Night has to trick the mother of the missing child into sleeping to save her soul.",
+      popularity: 41.7447,
+      poster_path: "/wtNHVaiEWwc05Iwzu1gravgvtDo.jpg",
+      release_date: "2024-09-07",
+      title: "Night",
+      vote_average: 10,
+      vote_count: 3,
+      genre: ["Animation"],
+    },
+    {
+      backdrop_path: null,
+      id: 1052243,
+      original_language: "en",
+      original_title: "MANUEL",
+      overview:
+        "In 1943, a Jewish family hides from the nazi roundups. Adam, a 10-year-old boy, following a strange dream, starts a mysterious countdown.",
+      popularity: 41.0782,
+      poster_path: "/hpYt0ouIHcZhbxQDT4JFXLY3fih.jpg",
+      release_date: "2022-11-23",
+      title: "MANUEL",
+      vote_average: 10,
+      vote_count: 1,
+      genre: [],
+    },
+    {
+      backdrop_path: "/xPpXYnCWfjkt3zzE0dpCNME1pXF.jpg",
+      id: 635302,
+      original_language: "ja",
+      original_title: "劇場版「鬼滅の刃」無限列車編",
+      overview:
+        "Tanjiro Kamado, joined with Inosuke Hashibira, a boy raised by boars who wears a boar's head, and Zenitsu Agatsuma, a scared boy who reveals his true power when he sleeps, boards the Infinity Train on a new mission with the Fire Hashira, Kyojuro Rengoku, to defeat a demon who has been tormenting the people and killing the demon slayers who oppose it!",
+      popularity: 39.895,
+      poster_path: "/h8Rb9gBr48ODIwYUttZNYeMWeUU.jpg",
+      release_date: "2020-10-16",
+      title: "Demon Slayer -Kimetsu no Yaiba- The Movie: Mugen Train",
+      vote_average: 8.208,
+      vote_count: 4208,
+      genre: ["Animation", "Action", "Fantasy", "Thriller"],
+    },
+    {
+      backdrop_path: "/jvzPTf0nhsqAXodYT6ILKb99IA2.jpg",
+      id: 1289936,
+      original_language: "en",
+      original_title: "Downton Abbey: The Grand Finale",
+      overview:
+        "When Mary finds herself at the center of a public scandal and the family faces financial strife, the entire household grapples with the threat of social disgrace. The Crawleys must embrace change as the staff prepares for a new chapter with the next generation leading Downton Abbey into the future.",
+      popularity: 37.7952,
+      poster_path: "/jqIoQwfFaBZDJUIvjFwJTWlmRfO.jpg",
+      release_date: "2025-09-10",
+      title: "Downton Abbey: The Grand Finale",
+      vote_average: 8.045,
+      vote_count: 22,
+      genre: ["Drama", "Romance", "History"],
+    },
+    {
+      backdrop_path: "/enNubozHn9pXi0ycTVYUWfpHZm.jpg",
+      id: 155,
+      original_language: "en",
+      original_title: "The Dark Knight",
+      overview:
+        "Batman raises the stakes in his war on crime. With the help of Lt. Jim Gordon and District Attorney Harvey Dent, Batman sets out to dismantle the remaining criminal organizations that plague the streets. The partnership proves to be effective, but they soon find themselves prey to a reign of chaos unleashed by a rising criminal mastermind known to the terrified citizens of Gotham as the Joker.",
+      popularity: 37.2001,
+      poster_path: "/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
+      release_date: "2008-07-16",
+      title: "The Dark Knight",
+      vote_average: 8.523,
+      vote_count: 34372,
+      genre: ["Drama", "Action", "Crime", "Thriller"],
+    },
+    {
+      backdrop_path: null,
+      id: 1282667,
+      original_language: "no",
+      original_title: "Elsa",
+      overview:
+        "Set in Oslo 1945, Elsa the film explores national identity, heroism, vengeance, and sexual freedom.",
+      popularity: 35.7803,
+      poster_path: "/ln03NRzEsNa4D9jEQ25r7s9fqH7.jpg",
+      release_date: "2024-08-08",
+      title: "Elsa",
+      vote_average: 10,
+      vote_count: 1,
+      genre: ["Drama"],
+    },
+    {
+      backdrop_path: "/pNjh59JSxChQktamG3LMp9ZoQzp.jpg",
+      id: 278,
+      original_language: "en",
+      original_title: "The Shawshank Redemption",
+      overview:
+        "Imprisoned in the 1940s for the double murder of his wife and her lover, upstanding banker Andy Dufresne begins a new life at the Shawshank prison, where he puts his accounting skills to work for an amoral warden. During his long stretch in prison, Dufresne comes to be admired by the other inmates -- including an older prisoner named Red -- for his integrity and unquenchable sense of hope.",
+      popularity: 32.211,
+      poster_path: "/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg",
+      release_date: "1994-09-23",
+      title: "The Shawshank Redemption",
+      vote_average: 8.712,
+      vote_count: 28880,
+      genre: ["Drama", "Crime"],
+    },
+    {
+      backdrop_path: "/mDfJG3LC3Dqb67AZ52x3Z0jU0uB.jpg",
+      id: 299536,
+      original_language: "en",
+      original_title: "Avengers: Infinity War",
+      overview:
+        "As the Avengers and their allies have continued to protect the world from threats too large for any one hero to handle, a new danger has emerged from the cosmic shadows: Thanos. A despot of intergalactic infamy, his goal is to collect all six Infinity Stones, artifacts of unimaginable power, and use them to inflict his twisted will on all of reality. Everything the Avengers have fought for has led up to this moment - the fate of Earth and existence itself has never been more uncertain.",
+      popularity: 30.0485,
+      poster_path: "/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg",
+      release_date: "2018-04-25",
+      title: "Avengers: Infinity War",
+      vote_average: 8.235,
+      vote_count: 30934,
+      genre: ["Adventure", "Action", "Science Fiction"],
+    },
+    {
+      backdrop_path: "/kQzPzOfB0WnWPth65vG5qHvZ487.jpg",
+      id: 1234720,
+      original_language: "ko",
+      original_title: "부부 교환 - 무삭제",
+      overview:
+        "Nan-hee, who wants to enjoy her newlywed life, feels something wrong with her husband, Moo-yeong's body. No matter how much she tries to seduce him every night, Moo-yeong is unable to use his strength. One day, Nan-hee's high school classmate Yoo-na moves in next door. Nan-hee begins to heal Moo-yeong through Yoo-na's shocking suggestion.",
+      popularity: 29.4504,
+      poster_path: "/7WFlsCBnVyVfJxZWprAkU4poCaJ.jpg",
+      release_date: "2023-03-16",
+      title: "Couple Exchange",
+      vote_average: 9.8,
+      vote_count: 4,
+      genre: ["Romance"],
+    },
+    {
+      backdrop_path: "/z51Wzj94hvAIsWfknifKTqKJRwp.jpg",
+      id: 120,
+      original_language: "en",
+      original_title: "The Lord of the Rings: The Fellowship of the Ring",
+      overview:
+        "Young hobbit Frodo Baggins, after inheriting a mysterious ring from his uncle Bilbo, must leave his home in order to keep it from falling into the hands of its evil creator. Along the way, a fellowship is formed to protect the ringbearer and make sure that the ring arrives at its final destination: Mt. Doom, the only place where it can be destroyed.",
+      popularity: 29.2431,
+      poster_path: "/6oom5QYQ2yQTMJIbnvbkBL9cHo6.jpg",
+      release_date: "2001-12-18",
+      title: "The Lord of the Rings: The Fellowship of the Ring",
+      vote_average: 8.4,
+      vote_count: 26373,
+      genre: ["Adventure", "Fantasy", "Action"],
+    },
+    {
+      backdrop_path: "/7Nwnmyzrtd0FkcRyPqmdzTPppQa.jpg",
+      id: 106646,
+      original_language: "en",
+      original_title: "The Wolf of Wall Street",
+      overview:
+        "A New York stockbroker refuses to cooperate in a large securities fraud case involving corruption on Wall Street, corporate banking world and mob infiltration. Based on Jordan Belfort's autobiography.",
+      popularity: 29.019,
+      poster_path: "/kW9LmvYHAaS9iA0tHmZVq8hQYoq.jpg",
+      release_date: "2013-12-25",
+      title: "The Wolf of Wall Street",
+      vote_average: 8.028,
+      vote_count: 24973,
+      genre: ["Crime", "Drama", "Comedy"],
+    },
+    {
+      backdrop_path: "/gqby0RhyehP3uRrzmdyUZ0CgPPe.jpg",
+      id: 27205,
+      original_language: "en",
+      original_title: "Inception",
+      overview:
+        "Cobb, a skilled thief who commits corporate espionage by infiltrating the subconscious of his targets is offered a chance to regain his old life as payment for a task considered to be impossible: \"inception\", the implantation of another person's idea into a target's subconscious.",
+      popularity: 28.1109,
+      poster_path: "/ljsZTbVsrQSqZgWeep2B1QiDKuh.jpg",
+      release_date: "2010-07-15",
+      title: "Inception",
+      vote_average: 8.37,
+      vote_count: 37946,
+      genre: ["Action", "Science Fiction", "Adventure"],
+    },
+    {
+      backdrop_path: "/9Q7Q6B4hVE6DWl72m02mJceMCQS.jpg",
+      id: 1158166,
+      original_language: "en",
+      original_title:
+        "A Big Gay Hairy Hit! Where the Bears Are: The Documentary",
+      overview:
+        'This hilarious and touching documentary tells the story of how three older, gay, "bears" working in Hollywood, tired of having their gay-themed ideas rejected by the mainstream, decided to self-produce their own web series. Against all odds, the comedy featuring three bear roommates like "The Golden Girls" solving crimes a la "Murder, She Wrote," became a sensation online and one of the most successful web shows of all time. The documentary examines ageism, body-shaming, sex-positivity, the creative process and how friendship and community can ultimately create something beloved all over the world.',
+      popularity: 23.5619,
+      poster_path: "/g6VRpkGbbSm8i8rYdYJ1YfwvrC1.jpg",
+      release_date: "2023-09-23",
+      title: "A Big Gay Hairy Hit! Where the Bears Are: The Documentary",
+      vote_average: 9.5,
+      vote_count: 2,
+      genre: ["Documentary", "Comedy"],
+    },
+    {
+      backdrop_path: "/tmU7GeKVybMWFButWEGl2M4GeiP.jpg",
+      id: 238,
+      original_language: "en",
+      original_title: "The Godfather",
+      overview:
+        "Spanning the years 1945 to 1955, a chronicle of the fictional Italian-American Corleone crime family. When organized crime family patriarch, Vito Corleone barely survives an attempt on his life, his youngest son, Michael steps in to take care of the would-be killers, launching a campaign of bloody revenge.",
+      popularity: 27.2107,
+      poster_path: "/3bhkrj58Vtu7enYsRolD1fZdja1.jpg",
+      release_date: "1972-03-14",
+      title: "The Godfather",
+      vote_average: 8.685,
+      vote_count: 21827,
+      genre: ["Drama", "Crime"],
+    },
+    {
+      backdrop_path: "/wSJHuSD7ojzoXifWjOAjxV7UpEL.jpg",
+      id: 354912,
+      original_language: "en",
+      original_title: "Coco",
+      overview:
+        "Despite his family’s baffling generations-old ban on music, Miguel dreams of becoming an accomplished musician like his idol, Ernesto de la Cruz. Desperate to prove his talent, Miguel finds himself in the stunning and colorful Land of the Dead following a mysterious chain of events. Along the way, he meets charming trickster Hector, and together, they set off on an extraordinary journey to unlock the real story behind Miguel's family history.",
+      popularity: 25.3914,
+      poster_path: "/6Ryitt95xrO8KXuqRGm1fUuNwqF.jpg",
+      release_date: "2017-10-27",
+      title: "Coco",
+      vote_average: 8.202,
+      vote_count: 20229,
+      genre: ["Family", "Animation", "Music", "Adventure"],
+    },
+    {
+      backdrop_path: "/2u7zbn8EudG6kLlBzUYqP8RyFU4.jpg",
+      id: 122,
+      original_language: "en",
+      original_title: "The Lord of the Rings: The Return of the King",
+      overview:
+        "As armies mass for a final battle that will decide the fate of the world--and powerful, ancient forces of Light and Dark compete to determine the outcome--one member of the Fellowship of the Ring is revealed as the noble heir to the throne of the Kings of Men. Yet, the sole hope for triumph over evil lies with a brave hobbit, Frodo, who, accompanied by his loyal friend Sam and the hideous, wretched Gollum, ventures deep into the very dark heart of Mordor on his seemingly impossible quest to destroy the Ring of Power.​",
+      popularity: 25.0408,
+      poster_path: "/rCzpDGLbOoPwLjy3OAm5NUPOTrC.jpg",
+      release_date: "2003-12-17",
+      title: "The Lord of the Rings: The Return of the King",
+      vote_average: 8.5,
+      vote_count: 25448,
+      genre: ["Adventure", "Fantasy", "Action"],
+    },
+    {
+      backdrop_path: "/p1PLSI5Nw2krGxD7X4ulul1tDAk.jpg",
+      id: 807,
+      original_language: "en",
+      original_title: "Se7en",
+      overview:
+        'Two homicide detectives are on a desperate hunt for a serial killer whose crimes are based on the "seven deadly sins" in this dark and haunting film that takes viewers from the tortured remains of one victim to the next. The seasoned Det. Somerset researches each sin in an effort to get inside the killer\'s mind, while his novice partner, Mills, scoffs at his efforts to unravel the case.',
+      popularity: 23.44,
+      poster_path: "/191nKfP0ehp3uIvWqgPbFmI4lv9.jpg",
+      release_date: "1995-09-22",
+      title: "Se7en",
+      vote_average: 8.377,
+      vote_count: 22090,
+      genre: ["Crime", "Mystery", "Thriller"],
+    },
+    {
+      backdrop_path: "/1pmXyN3sKeYoUhu5VBZiDU4BX21.jpg",
+      id: 1184918,
+      original_language: "en",
+      original_title: "The Wild Robot",
+      overview:
+        "After a shipwreck, an intelligent robot called Roz is stranded on an uninhabited island. To survive the harsh environment, Roz bonds with the island's animals and cares for an orphaned baby goose.",
+      popularity: 24.1619,
+      poster_path: "/wTnV3PCVW5O92JMrFvvrRcV39RU.jpg",
+      release_date: "2024-09-12",
+      title: "The Wild Robot",
+      vote_average: 8.316,
+      vote_count: 5348,
+      genre: ["Animation", "Science Fiction", "Family"],
+    },
+    {
+      backdrop_path: "/uB66OugiICp1lM5CMyUSqRifxWQ.jpg",
+      id: 1515395,
+      original_language: "en",
+      original_title: "Lego Disney Princess: Villains Unite",
+      overview:
+        "After Ariel, Moana, Tiana, Rapunzel, and Snow White thwarted Gaston's plan to take over all of their kingdoms, he calls upon Ursula, Jafar, and the Evil Queen to help take the Princesses down once and for all. The Princesses learn about Gaston's scheme and recruit a few friends of their own with the help of Magic Mirror: Aurora, Belle, and Cinderella! Together, the Princesses team up for an ultimate showdown of good versus evil.",
+      popularity: 21.5643,
+      poster_path: "/ajcRSuv1rYbrDxnlNN5xx5H44Ft.jpg",
+      release_date: "2025-08-24",
+      title: "Lego Disney Princess: Villains Unite",
+      vote_average: 8.7,
+      vote_count: 5,
+      genre: ["Animation", "Comedy", "Fantasy", "Adventure", "Family"],
+    },
+    {
+      backdrop_path: "/vbk5CfaAHOjQPSAcYm6AoRRz2Af.jpg",
+      id: 673,
+      original_language: "en",
+      original_title: "Harry Potter and the Prisoner of Azkaban",
+      overview:
+        "Year three at Hogwarts means new fun and challenges as Harry learns the delicate art of approaching a Hippogriff, transforming shape-shifting Boggarts into hilarity and even turning back time. But the term also brings danger: soul-sucking Dementors hover over the school, an ally of the accursed He-Who-Cannot-Be-Named lurks within the castle walls, and fearsome wizard Sirius Black escapes Azkaban. And Harry will confront them all.",
+      popularity: 22.2029,
+      poster_path: "/aWxwnYoe8p2d2fcxOqtvAtJ72Rw.jpg",
+      release_date: "2004-05-31",
+      title: "Harry Potter and the Prisoner of Azkaban",
+      vote_average: 8.011,
+      vote_count: 22386,
+      genre: ["Adventure", "Fantasy"],
+    },
+    {
+      backdrop_path: "/hZkgoQYus5vegHoetLkCJzb17zJ.jpg",
+      id: 550,
+      original_language: "en",
+      original_title: "Fight Club",
+      overview:
+        'A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy. Their concept catches on, with underground "fight clubs" forming in every town, until an eccentric gets in the way and ignites an out-of-control spiral toward oblivion.',
+      popularity: 21.8203,
+      poster_path: "/jSziioSwPVrOy9Yow3XhWIBDjq1.jpg",
+      release_date: "1999-10-15",
+      title: "Fight Club",
+      vote_average: 8.438,
+      vote_count: 30741,
+      genre: ["Drama", "Thriller"],
+    },
+    {
+      backdrop_path: "/iHHWF01W2vNpjI8UzWh2F7tJEZp.jpg",
+      id: 1246369,
+      original_language: "ja",
+      original_title: "室町無頼",
+      overview:
+        "Set in war-torn 15th century Kyoto, on the eve of the Onin War, the movie centers on a band of outlaws led by Hyoe, a scoundrel whose lethal sword skills place him at the tip of the spear in a deadly uprising against the corrupt Shogunate and its army, led by former friend-turned-archrival Doken.",
+      popularity: 20.6258,
+      poster_path: "/apthwI5WmRT3cpiMg9sppEJ0PsN.jpg",
+      release_date: "2025-01-17",
+      title: "Samurai Fury",
+      vote_average: 8.8,
+      vote_count: 11,
+      genre: ["Action", "Drama"],
+    },
+    {
+      backdrop_path: "/8K9qHeM6G6QjQN0C5XKFGvK5lzM.jpg",
+      id: 603,
+      original_language: "en",
+      original_title: "The Matrix",
+      overview:
+        "Set in the 22nd century, The Matrix tells the story of a computer hacker who joins a group of underground insurgents fighting the vast and powerful computers who now rule the earth.",
+      popularity: 21.3947,
+      poster_path: "/p96dm7sCMn4VYAStA6siNz30G1r.jpg",
+      release_date: "1999-03-31",
+      title: "The Matrix",
+      vote_average: 8.232,
+      vote_count: 26789,
+      genre: ["Action", "Science Fiction"],
+    },
+    {
+      backdrop_path: "/ukfI9QkU1aIhOhKXYWE9n3z1mFR.jpg",
+      id: 129,
+      original_language: "ja",
+      original_title: "千と千尋の神隠し",
+      overview:
+        "A young girl, Chihiro, becomes trapped in a strange new world of spirits. When her parents undergo a mysterious transformation, she must call upon the courage she never knew she had to free her family.",
+      popularity: 19.817,
+      poster_path: "/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
+      release_date: "2001-07-20",
+      title: "Spirited Away",
+      vote_average: 8.535,
+      vote_count: 17471,
+      genre: ["Animation", "Family", "Fantasy"],
+    },
+    {
+      backdrop_path: "/kVd3a9YeLGkoeR50jGEXM6EqseS.jpg",
+      id: 569094,
+      original_language: "en",
+      original_title: "Spider-Man: Across the Spider-Verse",
+      overview:
+        "After reuniting with Gwen Stacy, Brooklyn’s full-time, friendly neighborhood Spider-Man is catapulted across the Multiverse, where he encounters the Spider Society, a team of Spider-People charged with protecting the Multiverse’s very existence. But when the heroes clash on how to handle a new threat, Miles finds himself pitted against the other Spiders and must set out on his own to save those he loves most.",
+      popularity: 19.7824,
+      poster_path: "/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
+      release_date: "2023-05-31",
+      title: "Spider-Man: Across the Spider-Verse",
+      vote_average: 8.3,
+      vote_count: 7879,
+      genre: ["Animation", "Action", "Adventure", "Science Fiction"],
+    },
+    {
+      backdrop_path: "/mshaKLtPUxcDBhzau6qiObEblhL.jpg",
+      id: 121,
+      original_language: "en",
+      original_title: "The Lord of the Rings: The Two Towers",
+      overview:
+        "Frodo Baggins and the other members of the Fellowship continue on their sacred quest to destroy the One Ring--but on separate paths. Their destinies lie at two towers--Orthanc Tower in Isengard, where the corrupt wizard Saruman awaits, and Sauron's fortress at Barad-dur, deep within the dark lands of Mordor. Frodo and Sam are trekking to Mordor to destroy the One Ring of Power while Gimli, Legolas and Aragorn search for the orc-captured Merry and Pippin. All along, nefarious wizard Saruman awaits the Fellowship members at the Orthanc Tower in Isengard.",
+      popularity: 19.2542,
+      poster_path: "/5VTN0pR8gcqV3EPUHHfMGnJYN9L.jpg",
+      release_date: "2002-12-18",
+      title: "The Lord of the Rings: The Two Towers",
+      vote_average: 8.409,
+      vote_count: 22906,
+      genre: ["Adventure", "Fantasy", "Action"],
+    },
+    {
+      backdrop_path: "/n5A7brJCjejceZmHyujwUTVgQNC.jpg",
+      id: 12445,
+      original_language: "en",
+      original_title: "Harry Potter and the Deathly Hallows: Part 2",
+      overview:
+        "Harry, Ron and Hermione continue their quest to vanquish the evil Voldemort once and for all. Just as things begin to look hopeless for the young wizards, Harry discovers a trio of magical objects that endow him with powers to rival Voldemort's formidable skills.",
+      popularity: 19.0192,
+      poster_path: "/c54HpQmuwXjHq2C9wmoACjxoom3.jpg",
+      release_date: "2011-07-12",
+      title: "Harry Potter and the Deathly Hallows: Part 2",
+      vote_average: 8.084,
+      vote_count: 21276,
+      genre: ["Fantasy", "Adventure"],
+    },
+    {
+      backdrop_path: "/bF8eIIIJJoMZf2mFibAejqEGQcX.jpg",
+      id: 244786,
+      original_language: "en",
+      original_title: "Whiplash",
+      overview:
+        "Under the direction of a ruthless instructor, a talented young drummer begins to pursue perfection at any cost, even his humanity.",
+      popularity: 19.8184,
+      poster_path: "/7fn624j5lj3xTme2SgiLCeuedmO.jpg",
+      release_date: "2014-10-10",
+      title: "Whiplash",
+      vote_average: 8.376,
+      vote_count: 15908,
+      genre: ["Drama", "Music"],
+    },
+    {
+      backdrop_path: "/hwNtEmmugU5Yd7hpfprNWI0DGIn.jpg",
+      id: 16869,
+      original_language: "en",
+      original_title: "Inglourious Basterds",
+      overview:
+        'In Nazi-occupied France during World War II, a group of Jewish-American soldiers known as "The Basterds" are chosen specifically to spread fear throughout the Third Reich by scalping and brutally killing Nazis. The Basterds, lead by Lt. Aldo Raine soon cross paths with a French-Jewish teenage girl who runs a movie theater in Paris which is targeted by the soldiers.',
+      popularity: 18.9924,
+      poster_path: "/7sfbEnaARXDDhKm0CZ7D7uc2sbo.jpg",
+      release_date: "2009-08-02",
+      title: "Inglourious Basterds",
+      vote_average: 8.215,
+      vote_count: 23200,
+      genre: ["Drama", "Thriller", "War"],
+    },
+    {
+      backdrop_path: "/rbZvGN1A1QyZuoKzhCw8QPmf2q0.jpg",
+      id: 11324,
+      original_language: "en",
+      original_title: "Shutter Island",
+      overview:
+        "World War II soldier-turned-U.S. Marshal Teddy Daniels investigates the disappearance of a patient from a hospital for the criminally insane, but his efforts are compromised by troubling visions and a mysterious doctor.",
+      popularity: 18.9594,
+      poster_path: "/nrmXQ0zcZUL8jFLrakWc90IR8z9.jpg",
+      release_date: "2010-02-14",
+      title: "Shutter Island",
+      vote_average: 8.201,
+      vote_count: 24872,
+      genre: ["Drama", "Thriller", "Mystery"],
+    },
+    {
+      backdrop_path: "/67HggiWaP9ZLv5sPYmyRV37yAJM.jpg",
+      id: 13,
+      original_language: "en",
+      original_title: "Forrest Gump",
+      overview:
+        "A man with a low IQ has accomplished great things in his life and been present during significant historic events—in each case, far exceeding what anyone imagined he could do. But despite all he has achieved, his one true love eludes him.",
+      popularity: 18.8914,
+      poster_path: "/arw2vcBveWOVZr6pxd9XTd1TdQa.jpg",
+      release_date: "1994-06-23",
+      title: "Forrest Gump",
+      vote_average: 8.5,
+      vote_count: 28630,
+      genre: ["Comedy", "Drama", "Romance"],
+    },
+    {
+      backdrop_path: "/ku9p7ciLeuV1R8pqJGMgawaaVE8.jpg",
+      id: 823219,
+      original_language: "lv",
+      original_title: "Straume",
+      overview:
+        "A solitary cat, displaced by a great flood, finds refuge on a boat with various species and must navigate the challenges of adapting to a transformed world together.",
+      popularity: 18.8373,
+      poster_path: "/imKSymKBK7o73sajciEmndJoVkR.jpg",
+      release_date: "2024-08-29",
+      title: "Flow",
+      vote_average: 8.2,
+      vote_count: 2296,
+      genre: ["Animation", "Adventure", "Fantasy", "Family"],
+    },
+    {
+      backdrop_path: "/suaEOtk1N1sgg2MTM7oZd2cfVp3.jpg",
+      id: 680,
+      original_language: "en",
+      original_title: "Pulp Fiction",
+      overview:
+        "A burger-loving hit man, his philosophical partner, a drug-addled gangster's moll and a washed-up boxer converge in this sprawling, comedic crime caper. Their adventures unfurl in three stories that ingeniously trip back and forth in time.",
+      popularity: 18.4888,
+      poster_path: "/vQWk5YBFWF4bZaofAbv0tShwBvQ.jpg",
+      release_date: "1994-09-10",
+      title: "Pulp Fiction",
+      vote_average: 8.487,
+      vote_count: 29070,
+      genre: ["Thriller", "Crime", "Comedy", "Drama"],
+    },
+    {
+      backdrop_path: "/neeNHeXjMF5fXoCJRsOmkNGC7q.jpg",
+      id: 872585,
+      original_language: "en",
+      original_title: "Oppenheimer",
+      overview:
+        "The story of J. Robert Oppenheimer's role in the development of the atomic bomb during World War II.",
+      popularity: 18.3966,
+      poster_path: "/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
+      release_date: "2023-07-19",
+      title: "Oppenheimer",
+      vote_average: 8.05,
+      vote_count: 10689,
+      genre: ["Drama", "History"],
+    },
+    {
+      backdrop_path: "/jr8tSoJGj33XLgFBy6lmZhpGQNu.jpg",
+      id: 315162,
+      original_language: "en",
+      original_title: "Puss in Boots: The Last Wish",
+      overview:
+        "Puss in Boots discovers that his passion for adventure has taken its toll: He has burned through eight of his nine lives, leaving him with only one life left. Puss sets out on an epic journey to find the mythical Last Wish and restore his nine lives.",
+      popularity: 18.3535,
+      poster_path: "/kuf6dutpsT0vSVehic3EZIqkOBt.jpg",
+      release_date: "2022-12-07",
+      title: "Puss in Boots: The Last Wish",
+      vote_average: 8.213,
+      vote_count: 8393,
+      genre: ["Animation", "Adventure", "Fantasy", "Comedy", "Family"],
+    },
+    {
+      backdrop_path: "/kBSSbN1sOiJtXjAGVZXxHJR9Kox.jpg",
+      id: 361743,
+      original_language: "en",
+      original_title: "Top Gun: Maverick",
+      overview:
+        "After more than thirty years of service as one of the Navy’s top aviators, and dodging the advancement in rank that would ground him, Pete “Maverick” Mitchell finds himself training a detachment of TOP GUN graduates for a specialized mission the likes of which no living pilot has ever seen.",
+      popularity: 18.2289,
+      poster_path: "/62HCnUTziyWcpDaBO2i1DX17ljH.jpg",
+      release_date: "2022-05-21",
+      title: "Top Gun: Maverick",
+      vote_average: 8.2,
+      vote_count: 10177,
+      genre: ["Action", "Drama"],
+    },
+    {
+      backdrop_path: null,
+      id: 202804,
+      original_language: "de",
+      original_title: "Leben mit Hannah",
+      overview:
+        "A picturesque blonde beauty constructs an impenetrable emotional wall that neither her parents, her boyfriend, nor her colleague can penetrate. Hannah may appear perfect on the surface, but her inner demons are slowly consuming her. A photo lab developer who rarely ventures out of her well-fortified apartment, Hannah finds that her repressed memories are unexpectedly jogged by a series of old photographs.",
+      popularity: 17.8294,
+      poster_path: "/ksiXmGN9DdNMCPnOU4BP9uDPaYF.jpg",
+      release_date: "2007-09-06",
+      title: "Hannah",
+      vote_average: 8,
+      vote_count: 2,
+      genre: ["Drama"],
+    },
+    {
+      backdrop_path: "/fgyv2yZcG69KwcxnNRU7EtpKM4B.jpg",
+      id: 687209,
+      original_language: "ko",
+      original_title: "여자 전쟁: 이사 온 남자",
+      overview:
+        "Min-jeong lives a simple but happy life until it's in ruins because of the man that moves in next to her. The man is Deok-man, someone she wants to erase from her memories.  She knows what he's up to next and she plans to take revenge on him.",
+      popularity: 17.8136,
+      poster_path: "/6j4aU2E2utHNBec1EtnxYDediIS.jpg",
+      release_date: "2016-10-17",
+      title: "Female Wars: The Man Who Moved In",
+      vote_average: 10,
+      vote_count: 1,
+      genre: ["Drama"],
+    },
+    {
+      backdrop_path: "/wXsQvli6tWqja51pYxXNG1LFIGV.jpg",
+      id: 8587,
+      original_language: "en",
+      original_title: "The Lion King",
+      overview:
+        "Young lion prince Simba, eager to one day become king of the Pride Lands, grows up under the watchful eye of his father Mufasa; all the while his villainous uncle Scar conspires to take the throne for himself. Amid betrayal and tragedy, Simba must confront his past and find his rightful place in the Circle of Life.",
+      popularity: 17.8024,
+      poster_path: "/sKCr78MXSLixwmZ8DyJLrpMsd15.jpg",
+      release_date: "1994-06-15",
+      title: "The Lion King",
+      vote_average: 8.256,
+      vote_count: 19017,
+      genre: ["Family", "Animation", "Drama", "Fantasy", "Adventure"],
+    },
+    {
+      backdrop_path: "/yz8QL8WFD8yj0LA5zIlNOgcHvZK.jpg",
+      id: 105,
+      original_language: "en",
+      original_title: "Back to the Future",
+      overview:
+        "Eighties teenager Marty McFly is accidentally sent back in time to 1955, inadvertently disrupting his parents' first meeting and attracting his mother's romantic interest. Marty must repair the damage to history by rekindling his parents' romance and - with the help of his eccentric inventor friend Doc Brown - return to 1985.",
+      popularity: 17.5295,
+      poster_path: "/vN5B5WgYscRGcQpVhHl6p9DDTP0.jpg",
+      release_date: "1985-07-03",
+      title: "Back to the Future",
+      vote_average: 8.321,
+      vote_count: 20861,
+      genre: ["Adventure", "Comedy", "Science Fiction"],
+    },
+    {
+      backdrop_path: "/2w4xG178RpB4MDAIfTkqAuSJzec.jpg",
+      id: 11,
+      original_language: "en",
+      original_title: "Star Wars",
+      overview:
+        "Princess Leia is captured and held hostage by the evil Imperial forces in their effort to take over the galactic Empire. Venturesome Luke Skywalker and dashing captain Han Solo team together with the loveable robot duo R2-D2 and C-3PO to rescue the beautiful princess and restore peace and justice in the Empire.",
+      popularity: 17.4962,
+      poster_path: "/6FfCtAuVAW8XJjZ7eWeLibRLWTw.jpg",
+      release_date: "1977-05-25",
+      title: "Star Wars",
+      vote_average: 8.205,
+      vote_count: 21480,
+      genre: ["Adventure", "Action", "Science Fiction"],
+    },
+    {
+      backdrop_path: "/tm87rqU4zCiDIJKJDHmmhFSjXiX.jpg",
+      id: 1468057,
+      original_language: "zh",
+      original_title: "角頭－鬥陣欸",
+      overview: "",
+      popularity: 17.2362,
+      poster_path: "/tc5z5OADIYlOZLn0xNNM32c0Cq5.jpg",
+      release_date: "2025-08-21",
+      title: "GATAO: Big Brothers",
+      vote_average: 10,
+      vote_count: 2,
+      genre: ["Crime", "Action"],
+    },
+    {
+      backdrop_path: "/jnFmHDHmPZrQ7vyHmxXHcoxp25j.jpg",
+      id: 290098,
+      original_language: "ko",
+      original_title: "아가씨",
+      overview:
+        "1930s Korea, in the period of Japanese occupation, a new girl, Sookee, is hired as a handmaiden to a Japanese heiress, Hideko, who lives a secluded life on a large countryside estate with her domineering Uncle Kouzuki. But the maid has a secret. She is a pickpocket recruited by a swindler posing as a Japanese Count to help him seduce the Lady to elope with him, rob her of her fortune, and lock her up in a madhouse. The plan seems to proceed according to plan until Sookee and Hideko discover some unexpected emotions.",
+      popularity: 17.2228,
+      poster_path: "/dLlH4aNHdnmf62umnInL8xPlPzw.jpg",
+      release_date: "2016-06-01",
+      title: "The Handmaiden",
+      vote_average: 8.2,
+      vote_count: 4032,
+      genre: ["Thriller", "Drama", "Romance"],
+    },
+    {
+      backdrop_path: "/rVhoq70ZDDVfeoEPS312PcR5yLE.jpg",
+      id: 1290182,
+      original_language: "ko",
+      original_title: "그 시절, 우리가 좋아했던 소녀",
+      overview:
+        "A group of close friends who attend a private school all have a debilitating crush on the sunny star pupil, Sun-ah. The only member of the group who claims not to is Jin-woo, but he ends up loving her as well.",
+      popularity: 17.0884,
+      poster_path: "/dWJQe6HrnLQOZMwxIoahiswhiFx.jpg",
+      release_date: "2025-02-21",
+      title: "You Are the Apple of My Eye",
+      vote_average: 8.526,
+      vote_count: 38,
+      genre: ["Romance", "Drama", "Comedy"],
+    },
+    {
+      backdrop_path: "/kGzFbGhp99zva6oZODW5atUtnqi.jpg",
+      id: 240,
+      original_language: "en",
+      original_title: "The Godfather Part II",
+      overview:
+        "In the continuing saga of the Corleone crime family, a young Vito Corleone grows up in Sicily and in 1910s New York. In the 1950s, Michael Corleone attempts to expand the family business into Las Vegas, Hollywood and Cuba.",
+      popularity: 16.9412,
+      poster_path: "/hek3koDUyRQk7FIhPXsa6mT2Zc3.jpg",
+      release_date: "1974-12-20",
+      title: "The Godfather Part II",
+      vote_average: 8.57,
+      vote_count: 13184,
+      genre: ["Drama", "Crime"],
+    },
+    {
+      backdrop_path: "/hpzQHv8cA7j2Dn2CphOFYmllXzj.jpg",
+      id: 207,
+      original_language: "en",
+      original_title: "Dead Poets Society",
+      overview:
+        "At an elite, old-fashioned boarding school in New England, a passionate English teacher inspires his students to rebel against convention and seize the potential of every day, courting the disdain of the stern headmaster.",
+      popularity: 16.8691,
+      poster_path: "/erzbMlcNHOdx24AXOcn2ZKA7R1q.jpg",
+      release_date: "1989-06-02",
+      title: "Dead Poets Society",
+      vote_average: 8.302,
+      vote_count: 11905,
+      genre: ["Drama"],
+    },
+    {
+      backdrop_path: null,
+      id: 913259,
+      original_language: "ru",
+      original_title: "Алиса",
+      overview:
+        "The story of one day in the life of a teenage girl who lives in a family of alcoholics, and on this day she goes against her beliefs...",
+      popularity: 16.8351,
+      poster_path: "/kX7EIQiHmwhn8zY5PmLXBZg8qWS.jpg",
+      release_date: "2021-12-12",
+      title: "Alisa",
+      vote_average: 10,
+      vote_count: 1,
+      genre: ["Drama"],
+    },
+    {
+      backdrop_path: "/6WRrGYalXXveItfpnipYdayFkQB.jpg",
+      id: 1422,
+      original_language: "en",
+      original_title: "The Departed",
+      overview:
+        "To take down South Boston's Irish Mafia, the police send in one of their own to infiltrate the underworld, not realizing the syndicate has done likewise. While an undercover cop curries favor with the mob kingpin, a career criminal rises through the police ranks. But both sides soon discover there's a mole among them.",
+      popularity: 16.813,
+      poster_path: "/nT97ifVT2J1yMQmeq20Qblg61T.jpg",
+      release_date: "2006-10-04",
+      title: "The Departed",
+      vote_average: 8.159,
+      vote_count: 15524,
+      genre: ["Drama", "Thriller", "Crime"],
+    },
+    {
+      backdrop_path: "/vxJ08SvwomfKbpboCWynC3uqUg4.jpg",
+      id: 497,
+      original_language: "en",
+      original_title: "The Green Mile",
+      overview:
+        "A supernatural tale set on death row in a Southern prison, where gentle giant John Coffey possesses the mysterious power to heal people's ailments. When the cell block's head guard, Paul Edgecomb, recognizes Coffey's miraculous gift, he tries desperately to help stave off the condemned man's execution.",
+      popularity: 16.7969,
+      poster_path: "/8VG8fDNiy50H4FedGwdSVUPoaJe.jpg",
+      release_date: "1999-12-10",
+      title: "The Green Mile",
+      vote_average: 8.504,
+      vote_count: 18366,
+      genre: ["Fantasy", "Drama", "Crime"],
+    },
+    {
+      backdrop_path: "/rmiG2uwcNoGFmBKMoa1pIcf514L.jpg",
+      id: 37165,
+      original_language: "en",
+      original_title: "The Truman Show",
+      overview:
+        "An insurance salesman begins to suspect that his whole life is actually some sort of reality TV show.",
+      popularity: 16.7806,
+      poster_path: "/vuza0WqY239yBXOadKlGwJsZJFE.jpg",
+      release_date: "1998-06-04",
+      title: "The Truman Show",
+      vote_average: 8.149,
+      vote_count: 19293,
+      genre: ["Comedy", "Drama"],
+    },
+    {
+      backdrop_path: "/sctvs9cUwJD15qlTlrsh2BXsK75.jpg",
+      id: 111,
+      original_language: "en",
+      original_title: "Scarface",
+      overview:
+        "After getting a green card in exchange for assassinating a Cuban government official, Tony Montana stakes a claim on the drug trade in Miami. Viciously murdering anyone who stands in his way, Tony eventually becomes the biggest drug lord in the state, controlling nearly all the cocaine that comes through Miami. But increased pressure from the police, wars with Colombian drug cartels and his own drug-fueled paranoia serve to fuel the flames of his eventual downfall.",
+      popularity: 16.7145,
+      poster_path: "/iQ5ztdjvteGeboxtmRdXEChJOHh.jpg",
+      release_date: "1983-12-09",
+      title: "Scarface",
+      vote_average: 8.16,
+      vote_count: 12447,
+      genre: ["Action", "Crime", "Drama"],
+    },
+    {
+      backdrop_path: "/3RFmTz5h2UuFWEV4oH00XICBR9y.jpg",
+      id: 146233,
+      original_language: "en",
+      original_title: "Prisoners",
+      overview:
+        "Keller Dover is facing every parent’s worst nightmare. His six-year-old daughter, Anna, is missing, together with her young friend, Joy, and as minutes turn to hours, panic sets in. The only lead is a dilapidated RV that had earlier been parked on their street.",
+      popularity: 16.6691,
+      poster_path: "/jsS3a3ep2KyBVmmiwaz3LvK49b1.jpg",
+      release_date: "2013-09-19",
+      title: "Prisoners",
+      vote_average: 8.099,
+      vote_count: 12422,
+      genre: ["Drama", "Thriller", "Crime"],
+    },
+    {
+      backdrop_path: "/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg",
+      id: 299534,
+      original_language: "en",
+      original_title: "Avengers: Endgame",
+      overview:
+        "After the devastating events of Avengers: Infinity War, the universe is in ruins due to the efforts of the Mad Titan, Thanos. With the help of remaining allies, the Avengers must assemble once more in order to undo Thanos' actions and restore order to the universe once and for all, no matter what consequences may be in store.",
+      popularity: 16.5148,
+      poster_path: "/ulzhLuWrPK07P1YkdWQLZnQh1JL.jpg",
+      release_date: "2019-04-24",
+      title: "Avengers: Endgame",
+      vote_average: 8.237,
+      vote_count: 26714,
+      genre: ["Adventure", "Science Fiction", "Action"],
+    },
+    {
+      backdrop_path: "/gl0jzn4BupSbL2qMVeqrjKkF9Js.jpg",
+      id: 128,
+      original_language: "ja",
+      original_title: "もののけ姫",
+      overview:
+        "Ashitaka, a prince of the disappearing Emishi people, is cursed by a demonized boar god and must journey to the west to find a cure. Along the way, he encounters San, a young human woman fighting to protect the forest, and Lady Eboshi, who is trying to destroy it. Ashitaka must find a way to bring balance to this conflict.",
+      popularity: 16.3304,
+      poster_path: "/cMYCDADoLKLbB83g4WnJegaZimC.jpg",
+      release_date: "1997-07-12",
+      title: "Princess Mononoke",
+      vote_average: 8.327,
+      vote_count: 8521,
+      genre: ["Adventure", "Fantasy", "Animation"],
+    },
+    {
+      backdrop_path: "/AmR3JG1VQVxU8TfAvljUhfSFUOx.jpg",
+      id: 348,
+      original_language: "en",
+      original_title: "Alien",
+      overview:
+        "During its return to the earth, commercial spaceship Nostromo intercepts a distress signal from a distant planet. When a three-member team of the crew discovers a chamber containing thousands of eggs on the planet, a creature inside one of the eggs attacks an explorer. The entire crew is unaware of the impending nightmare set to descend upon them when the alien parasite planted inside its unfortunate host is birthed.",
+      popularity: 16.2643,
+      poster_path: "/vfrQk5IPloGg1v9Rzbh2Eg3VGyM.jpg",
+      release_date: "1979-05-25",
+      title: "Alien",
+      vote_average: 8.164,
+      vote_count: 15584,
+      genre: ["Horror", "Science Fiction"],
+    },
+    {
+      backdrop_path: "/yCnJT53HMXAK87xzPAdjdYhZ3JE.jpg",
+      id: 1124,
+      original_language: "en",
+      original_title: "The Prestige",
+      overview:
+        "A mysterious story of two magicians whose intense rivalry leads them on a life-long battle for supremacy -- full of obsession, deceit and jealousy with dangerous and deadly consequences.",
+      popularity: 15.8651,
+      poster_path: "/2ZOzyhoW08neG27DVySMCcq2emd.jpg",
+      release_date: "2006-10-17",
+      title: "The Prestige",
+      vote_average: 8.204,
+      vote_count: 16790,
+      genre: ["Drama", "Mystery", "Science Fiction"],
+    },
+    {
+      backdrop_path: "/o869RihWTdTyBcEZBjz0izvEsVf.jpg",
+      id: 693134,
+      original_language: "en",
+      original_title: "Dune: Part Two",
+      overview:
+        "Follow the mythic journey of Paul Atreides as he unites with Chani and the Fremen while on a path of revenge against the conspirators who destroyed his family. Facing a choice between the love of his life and the fate of the known universe, Paul endeavors to prevent a terrible future only he can foresee.",
+      popularity: 15.7415,
+      poster_path: "/6izwz7rsy95ARzTR3poZ8H6c5pp.jpg",
+      release_date: "2024-02-27",
+      title: "Dune: Part Two",
+      vote_average: 8.137,
+      vote_count: 7027,
+      genre: ["Science Fiction", "Adventure"],
+    },
+    {
+      backdrop_path: "/oLsts7ct0NVkdYpx5rZg10MG6zh.jpg",
+      id: 489,
+      original_language: "en",
+      original_title: "Good Will Hunting",
+      overview:
+        "Headstrong yet aimless, Will Hunting has a genius-level IQ but chooses to work as a janitor at MIT. When he secretly solves highly difficult graduate-level math problems, his talents are discovered by Professor Gerald Lambeau, who decides to help the misguided youth reach his potential. When Will is arrested for attacking a police officer, Professor Lambeau makes a deal to get leniency for him if he gets court-ordered therapy. Eventually, therapist Dr. Sean Maguire helps Will confront the demons that are holding him back.",
+      popularity: 15.6531,
+      poster_path: "/z2FnLKpFi1HPO7BEJxdkv6hpJSU.jpg",
+      release_date: "1997-12-05",
+      title: "Good Will Hunting",
+      vote_average: 8.157,
+      vote_count: 13088,
+      genre: ["Drama"],
+    },
+    {
+      backdrop_path: "/bxgTSUenZDHNFerQ1whRKplrMKF.jpg",
+      id: 389,
+      original_language: "en",
+      original_title: "12 Angry Men",
+      overview:
+        "The defense and the prosecution have rested and the jury is filing into the jury room to decide if a young Spanish-American is guilty or innocent of murdering his father. What begins as an open and shut case soon becomes a mini-drama of each of the jurors' prejudices and preconceptions about the trial, the accused, and each other.",
+      popularity: 15.4934,
+      poster_path: "/ow3wq89wM8qd5X7hWKxiRfsFf9C.jpg",
+      release_date: "1957-04-10",
+      title: "12 Angry Men",
+      vote_average: 8.549,
+      vote_count: 9392,
+      genre: ["Drama"],
+    },
+    {
+      backdrop_path: "/w5IDXtifKntw0ajv2co7jFlTQDM.jpg",
+      id: 62,
+      original_language: "en",
+      original_title: "2001: A Space Odyssey",
+      overview:
+        "Humanity finds a mysterious object buried beneath the lunar surface and sets off to find its origins with the help of HAL 9000, the world's most advanced super computer.",
+      popularity: 15.3264,
+      poster_path: "/ve72VxNqjGM69Uky4WTo2bK6rfq.jpg",
+      release_date: "1968-04-02",
+      title: "2001: A Space Odyssey",
+      vote_average: 8.1,
+      vote_count: 12021,
+      genre: ["Science Fiction", "Mystery", "Adventure"],
+    },
+    {
+      backdrop_path: "/vINgGecnz95iDL6fjQMARDsocgG.jpg",
+      id: 280,
+      original_language: "en",
+      original_title: "Terminator 2: Judgment Day",
+      overview:
+        "Ten years after the events of the original, a reprogrammed T-800 is sent back in time to protect young John Connor from the shape-shifting T-1000. Together with his mother Sarah, he fights to stop Skynet from triggering a nuclear apocalypse.",
+      popularity: 15.2237,
+      poster_path: "/weVXMD5QBGeQil4HEATZqAkXeEc.jpg",
+      release_date: "1991-07-03",
+      title: "Terminator 2: Judgment Day",
+      vote_average: 8.1,
+      vote_count: 13557,
+      genre: ["Action", "Thriller", "Science Fiction"],
+    },
+    {
+      backdrop_path: "/8mnXR9rey5uQ08rZAvzojKWbDQS.jpg",
+      id: 324857,
+      original_language: "en",
+      original_title: "Spider-Man: Into the Spider-Verse",
+      overview:
+        'Struggling to find his place in the world while juggling school and family, Brooklyn teenager Miles Morales is unexpectedly bitten by a radioactive spider and develops unfathomable powers just like the one and only Spider-Man. While wrestling with the implications of his new abilities, Miles discovers a super collider created by the madman Wilson "Kingpin" Fisk, causing others from across the Spider-Verse to be inadvertently transported to his dimension.',
+      popularity: 15.1399,
+      poster_path: "/iiZZdoQBEYBv6id8su7ImL0oCbD.jpg",
+      release_date: "2018-12-06",
+      title: "Spider-Man: Into the Spider-Verse",
+      vote_average: 8.4,
+      vote_count: 16431,
+      genre: ["Animation", "Action", "Adventure", "Science Fiction"],
+    },
+    {
+      backdrop_path: "/nv5wwZou159v5OC61i4ElR7OqyY.jpg",
+      id: 4935,
+      original_language: "ja",
+      original_title: "ハウルの動く城",
+      overview:
+        "Sophie, a young milliner, is turned into an elderly woman by a witch who enters her shop and curses her. She encounters a wizard named Howl and gets caught up in his resistance to fighting for the king.",
+      popularity: 15.1249,
+      poster_path: "/TkTPELv4kC3u1lkloush8skOjE.jpg",
+      release_date: "2004-09-09",
+      title: "Howl's Moving Castle",
+      vote_average: 8.397,
+      vote_count: 10512,
+      genre: ["Fantasy", "Animation", "Adventure"],
+    },
+    {
+      backdrop_path: "/8x9iKH8kWA0zdkgNdpAew7OstYe.jpg",
+      id: 372058,
+      original_language: "ja",
+      original_title: "君の名は。",
+      overview:
+        "High schoolers Mitsuha and Taki are complete strangers living separate lives. But one night, they suddenly switch places. Mitsuha wakes up in Taki’s body, and he in hers. This bizarre occurrence continues to happen randomly, and the two must adjust their lives around each other.",
+      popularity: 14.9633,
+      poster_path: "/q719jXXEzOoYaps6babgKnONONX.jpg",
+      release_date: "2016-08-26",
+      title: "Your Name.",
+      vote_average: 8.479,
+      vote_count: 11980,
+      genre: ["Animation", "Romance", "Drama"],
+    },
+    {
+      backdrop_path: "/vDKRMZGFTKP9nQolzeSB1rB1w6p.jpg",
+      id: 324786,
+      original_language: "en",
+      original_title: "Hacksaw Ridge",
+      overview:
+        "WWII American Army Medic Desmond T. Doss, who served during the Battle of Okinawa, refuses to kill people and becomes the first Conscientious Objector in American history to receive the Congressional Medal of Honor.",
+      popularity: 14.9579,
+      poster_path: "/wuz8TjCIWR2EVVMuEfBnQ1vuGS3.jpg",
+      release_date: "2016-10-07",
+      title: "Hacksaw Ridge",
+      vote_average: 8.193,
+      vote_count: 14307,
+      genre: ["Drama", "History", "War"],
+    },
+    {
+      backdrop_path: "/6aoyUbvu0419XLKLIMoH0TkEicH.jpg",
+      id: 103,
+      original_language: "en",
+      original_title: "Taxi Driver",
+      overview:
+        "Suffering from insomnia, disturbed loner Travis Bickle takes a job as a New York City cabbie, haunting the streets nightly, growing increasingly detached from reality as he dreams of cleaning up the filthy city.",
+      popularity: 14.876,
+      poster_path: "/ekstpH614fwDX8DUln1a2Opz0N8.jpg",
+      release_date: "1976-02-09",
+      title: "Taxi Driver",
+      vote_average: 8.135,
+      vote_count: 12862,
+      genre: ["Crime", "Drama"],
+    },
+    {
+      backdrop_path: "/744ybMaYRry1IQKoDakMc4GEU4L.jpg",
+      id: 38,
+      original_language: "en",
+      original_title: "Eternal Sunshine of the Spotless Mind",
+      overview:
+        "Joel Barish, heartbroken that his girlfriend underwent a procedure to erase him from her memory, decides to do the same. However, as he watches his memories of her fade away, he realises that he still loves her, and may be too late to correct his mistake.",
+      popularity: 14.7577,
+      poster_path: "/5MwkWH9tYHv3mV9OdYTMR5qreIz.jpg",
+      release_date: "2004-03-19",
+      title: "Eternal Sunshine of the Spotless Mind",
+      vote_average: 8.1,
+      vote_count: 15677,
+      genre: ["Science Fiction", "Drama", "Romance"],
+    },
+    {
+      backdrop_path: "/rW2xRFlJRbTnBJlQTSjQmjevIwb.jpg",
+      id: 857,
+      original_language: "en",
+      original_title: "Saving Private Ryan",
+      overview:
+        "As U.S. troops storm the beaches of Normandy, three brothers lie dead on the battlefield, with a fourth trapped behind enemy lines. Ranger captain John Miller and seven men are tasked with penetrating German-held territory and bringing the boy home.",
+      popularity: 14.312,
+      poster_path: "/uqx37cS8cpHg8U35f9U5IBlrCV3.jpg",
+      release_date: "1998-07-24",
+      title: "Saving Private Ryan",
+      vote_average: 8.22,
+      vote_count: 16514,
+      genre: ["Drama", "History", "War"],
+    },
+    {
+      backdrop_path: "/zb6fM1CX41D9rF9hdgclu0peUmy.jpg",
+      id: 424,
+      original_language: "en",
+      original_title: "Schindler's List",
+      overview:
+        "The true story of how businessman Oskar Schindler saved over a thousand Jewish lives from the Nazis while they worked as slaves in his factory during World War II.",
+      popularity: 14.2227,
+      poster_path: "/sF1U4EUQS8YHUYjNl3pMGNIQyr0.jpg",
+      release_date: "1993-12-15",
+      title: "Schindler's List",
+      vote_average: 8.566,
+      vote_count: 16699,
+      genre: ["Drama", "History", "War"],
+    },
+    {
+      backdrop_path: "/jhk6D8pim3yaByu1801kMoxXFaX.jpg",
+      id: 98,
+      original_language: "en",
+      original_title: "Gladiator",
+      overview:
+        "After the death of Emperor Marcus Aurelius, his devious son takes power and demotes Maximus, one of Rome's most capable generals who Marcus preferred. Eventually, Maximus is forced to become a gladiator and battle to the death against other men for the amusement of paying audiences.",
+      popularity: 14.2209,
+      poster_path: "/ty8TGRuvJLPUmAR1H1nRIsgwvim.jpg",
+      release_date: "2000-05-04",
+      title: "Gladiator",
+      vote_average: 8.22,
+      vote_count: 20048,
+      genre: ["Action", "Drama", "Adventure"],
+    },
+    {
+      backdrop_path: "/13Nz8EchKRdCgJcKdEoJAnpiVn2.jpg",
+      id: 791373,
+      original_language: "en",
+      original_title: "Zack Snyder's Justice League",
+      overview:
+        "Determined to ensure Superman's ultimate sacrifice was not in vain, Bruce Wayne aligns forces with Diana Prince with plans to recruit a team of metahumans to protect the world from an approaching threat of catastrophic proportions.",
+      popularity: 13.9351,
+      poster_path: "/tnAuB8q5vv7Ax9UAEje5Xi4BXik.jpg",
+      release_date: "2021-03-18",
+      title: "Zack Snyder's Justice League",
+      vote_average: 8.11,
+      vote_count: 10397,
+      genre: ["Action", "Adventure", "Fantasy"],
+    },
+    {
+      backdrop_path: "/n2eUT4zQA2yYcKOgAFidgOyiFoH.jpg",
+      id: 68718,
+      original_language: "en",
+      original_title: "Django Unchained",
+      overview:
+        "With the help of a German bounty hunter, a freed slave sets out to rescue his wife from a brutal Mississippi plantation owner.",
+      popularity: 13.8499,
+      poster_path: "/7oWY8VDWW7thTzWh3OKYRkWUlD5.jpg",
+      release_date: "2012-12-25",
+      title: "Django Unchained",
+      vote_average: 8.184,
+      vote_count: 27054,
+      genre: ["Drama", "Western"],
+    },
+    {
+      backdrop_path: "/eG8wN73Ma8AwvXtqIHdMXkaVevq.jpg",
+      id: 1362429,
+      original_language: "ja",
+      original_title: "映画 先輩はおとこのこ あめのち晴れ",
+      overview:
+        "During spring break, Saki visits her father and has a close encounter with a whale. / Makoto confronts a former classmate. Meanwhile, Saki must make a difficult decision. / Saki is upset after spending the day at her mother's house. Makoto, meanwhile, decides to take a step forward. / After much thought, Saki finally makes a decision.",
+      popularity: 13.7981,
+      poster_path: "/qOCnr7MNK3jbWcLFusveOd2wsIe.jpg",
+      release_date: "2025-02-14",
+      title: "Senpai Is an Otokonoko Movie: Sunshine After the Rain",
+      vote_average: 10,
+      vote_count: 1,
+      genre: ["Animation", "Comedy", "Romance", "Drama"],
+    },
+    {
+      backdrop_path: "/2ha0wAOqrUcLScStWQcgeOOXapQ.jpg",
+      id: 1241921,
+      original_language: "en",
+      original_title: "A Big Bold Beautiful Journey",
+      overview:
+        "Sarah and David are single strangers who meet at a mutual friend’s wedding and soon, through a surprising twist of fate, find themselves on a funny, fantastical, sweeping adventure together where they get to re-live important moments from their respective pasts, illuminating how they got to where they are in the present... and possibly getting a chance to alter their futures.",
+      popularity: 13.4952,
+      poster_path: "/dYm4Ah0UAgBHkYEPZIhuhkzl6ue.jpg",
+      release_date: "2025-09-17",
+      title: "A Big Bold Beautiful Journey",
+      vote_average: 9,
+      vote_count: 2,
+      genre: ["Romance", "Fantasy", "Drama"],
+    },
+    {
+      backdrop_path: "/sw7mordbZxgITU877yTpZCud90M.jpg",
+      id: 769,
+      original_language: "en",
+      original_title: "GoodFellas",
+      overview:
+        "The true story of Henry Hill, a half-Irish, half-Sicilian Brooklyn kid who is adopted by neighbourhood gangsters at an early age and climbs the ranks of a Mafia family under the guidance of Jimmy Conway.",
+      popularity: 13.492,
+      poster_path: "/aKuFiU82s5ISJpGZp7YkIr3kCUd.jpg",
+      release_date: "1990-09-12",
+      title: "GoodFellas",
+      vote_average: 8.455,
+      vote_count: 13624,
+      genre: ["Drama", "Crime"],
+    },
+    {
+      backdrop_path: null,
+      id: 1135869,
+      original_language: "ho",
+      original_title: "Kelas Bintang - Salome",
+      overview: "Kelas Bintang is back with this pack of drama called Salome.",
+      popularity: 13.4545,
+      poster_path: "/9R94k6pMdLWHwzxSSlKVrPo0EE3.jpg",
+      release_date: "2023-05-13",
+      title: "Salome",
+      vote_average: 10,
+      vote_count: 2,
+      genre: ["Drama", "Romance"],
+    },
+    {
+      backdrop_path: "/eohMDv8x1XRSkPdjWv5xsFct4Dj.jpg",
+      id: 500,
+      original_language: "en",
+      original_title: "Reservoir Dogs",
+      overview:
+        "A botched robbery indicates a police informant, and the pressure mounts in the aftermath at a warehouse. Crime begets violence as the survivors -- veteran Mr. White, newcomer Mr. Orange, psychopathic parolee Mr. Blonde, bickering weasel Mr. Pink and Nice Guy Eddie -- unravel.",
+      popularity: 13.3035,
+      poster_path: "/xi8Iu6qyTfyZVDVy60raIOYJJmk.jpg",
+      release_date: "1992-09-02",
+      title: "Reservoir Dogs",
+      vote_average: 8.118,
+      vote_count: 14839,
+      genre: ["Crime", "Thriller"],
+    },
+    {
+      backdrop_path: "/gZWl93sf8AxavYpVT1Un6EF3oCj.jpg",
+      id: 475557,
+      original_language: "en",
+      original_title: "Joker",
+      overview:
+        "During the 1980s, a failed stand-up comedian is driven insane and turns to a life of crime and chaos in Gotham City while becoming an infamous psychopathic crime figure.",
+      popularity: 13.1127,
+      poster_path: "/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg",
+      release_date: "2019-10-01",
+      title: "Joker",
+      vote_average: 8.133,
+      vote_count: 26793,
+      genre: ["Crime", "Thriller", "Drama"],
+    },
+    {
+      backdrop_path: "/jynfI114q3kOAbIiVjVfFFmttU2.jpg",
+      id: 101,
+      original_language: "fr",
+      original_title: "Léon",
+      overview:
+        "Léon, the top hit man in New York, has earned a rep as an effective \"cleaner\". But when his next-door neighbors are wiped out by a loose-cannon DEA agent, he becomes the unwilling custodian of 12-year-old Mathilda. Before long, Mathilda's thoughts turn to revenge, and she considers following in Léon's footsteps.",
+      popularity: 13.0902,
+      poster_path: "/bxB2q91nKYp8JNzqE7t7TWBVupB.jpg",
+      release_date: "1994-09-14",
+      title: "Léon: The Professional",
+      vote_average: 8.301,
+      vote_count: 15445,
+      genre: ["Crime", "Drama", "Action"],
+    },
+    {
+      backdrop_path: "/iyHqd29vWF8ZRrQOO5KYEHLTtfG.jpg",
+      id: 1319700,
+      original_language: "ja",
+      original_title: "本心",
+      overview:
+        "Why had a mother who seemed happy desired to end her own life? Desperate to uncover his mother’s true intentions, Sakuya ventures into uncharted technological territory. He turns to VF (Virtual Figure), a technology that aggregates personal data from one’s life to create a “human” in a virtual space.",
+      popularity: 12.9839,
+      poster_path: "/mCUkFIuEnVlkvDqGgN3gpZkH9Pr.jpg",
+      release_date: "2024-11-08",
+      title: "The Real You",
+      vote_average: 8.5,
+      vote_count: 4,
+      genre: ["Drama", "Science Fiction"],
+    },
+    {
+      backdrop_path: "/ai2FicMUxLCurVkjtYdSvVDWRmS.jpg",
+      id: 10681,
+      original_language: "en",
+      original_title: "WALL·E",
+      overview:
+        "What if mankind had to leave Earth and somebody forgot to turn the last robot off? After hundreds of years doing what he was built for, WALL•E discovers a new purpose in life when he meets a sleek search robot named EVE. EVE comes to realize that WALL•E has inadvertently stumbled upon the key to the planet's future, and races back to space to report to the humans. Meanwhile, WALL•E chases EVE across the galaxy and sets into motion one of the most imaginative adventures ever brought to the big screen.",
+      popularity: 12.9785,
+      poster_path: "/hbhFnRzzg6ZDmm8YAmxBnQpQIPh.jpg",
+      release_date: "2008-06-22",
+      title: "WALL·E",
+      vote_average: 8.102,
+      vote_count: 19502,
+      genre: ["Animation", "Family", "Science Fiction"],
+    },
+    {
+      backdrop_path: "/2vq5GTJOahE03mNYZGxIynlHcWr.jpg",
+      id: 359724,
+      original_language: "en",
+      original_title: "Ford v Ferrari",
+      overview:
+        "American car designer Carroll Shelby and the British-born driver Ken Miles work together to battle corporate interference, the laws of physics, and their own personal demons to build a revolutionary race car for Ford Motor Company and take on the dominating race cars of Enzo Ferrari at the 24 Hours of Le Mans in France in 1966.",
+      popularity: 12.8984,
+      poster_path: "/dR1Ju50iudrOh3YgfwkAU1g2HZe.jpg",
+      release_date: "2019-11-13",
+      title: "Ford v Ferrari",
+      vote_average: 8.007,
+      vote_count: 8489,
+      genre: ["Drama", "Action", "History"],
+    },
+    {
+      backdrop_path: "/x4biAVdPVCghBlsVIzB6NmbghIz.jpg",
+      id: 429,
+      original_language: "it",
+      original_title: "Il buono, il brutto, il cattivo",
+      overview:
+        "While the Civil War rages on between the Union and the Confederacy, three men – a quiet loner, a ruthless hitman, and a Mexican bandit – comb the American Southwest in search of a strongbox containing $200,000 in stolen gold.",
+      popularity: 12.7106,
+      poster_path: "/bX2xnavhMYjWDoZp1VM6VnU1xwe.jpg",
+      release_date: "1966-12-22",
+      title: "The Good, the Bad and the Ugly",
+      vote_average: 8.465,
+      vote_count: 9165,
+      genre: ["Western"],
+    },
+    {
+      backdrop_path: null,
+      id: 860410,
+      original_language: "zh",
+      original_title: "수리기사의 참교육",
+      overview:
+        "One day in midsummer, Uchida, a contractor, visits Sawako's house to check the air conditioner. Seeing Uchida's wide chest muscles tanned with her moderate chocolate color, her married woman Sawako felt the trembling of her chest in an instant. She tries hard to hide her feelings, but her Uchida penetrates Sawako's heart and approaches her...",
+      popularity: 12.7101,
+      poster_path: "/faJskm5nNutoxfORCtODQewzKDL.jpg",
+      release_date: "2017-01-01",
+      title: "Asebamu Akahadaka Tsuma",
+      vote_average: 10,
+      vote_count: 1,
+      genre: [],
+    },
+    {
+      backdrop_path: "/q6OGlZ1KMEb14AC8KbPCxyNOal6.jpg",
+      id: 77338,
+      original_language: "fr",
+      original_title: "Intouchables",
+      overview:
+        "A true story of two men who should never have met – a quadriplegic aristocrat who was injured in a paragliding accident and a young man from the projects.",
+      popularity: 12.4696,
+      poster_path: "/1QU7HKgsQbGpzsJbJK4pAVQV9F5.jpg",
+      release_date: "2011-11-02",
+      title: "The Intouchables",
+      vote_average: 8.272,
+      vote_count: 17841,
+      genre: ["Drama", "Comedy"],
+    },
+    {
+      backdrop_path: "/zViRwl3ySscZnbXZJ2Q9wq3SeUG.jpg",
+      id: 698687,
+      original_language: "en",
+      original_title: "Transformers One",
+      overview:
+        "The untold origin story of Optimus Prime and Megatron, better known as sworn enemies, but once were friends bonded like brothers who changed the fate of Cybertron forever.",
+      popularity: 12.4452,
+      poster_path: "/iRCgqpdVE4wyLQvGYU3ZP7pAtUc.jpg",
+      release_date: "2024-09-11",
+      title: "Transformers One",
+      vote_average: 8,
+      vote_count: 1378,
+      genre: ["Animation", "Science Fiction", "Adventure", "Family"],
+    },
+    {
+      backdrop_path: "/9jrHaaXWB37VcA4KGemP8iF7bFB.jpg",
+      id: 629,
+      original_language: "en",
+      original_title: "The Usual Suspects",
+      overview:
+        "Held in an L.A. interrogation room, Verbal Kint attempts to convince the feds that a mythic crime lord, Keyser Soze, not only exists, but was also responsible for drawing him and his four partners into a multi-million dollar heist that ended with an explosion in San Pedro harbor – leaving few survivors. Verbal lures his interrogators with an incredible story of the crime lord's almost supernatural prowess.",
+      popularity: 12.3198,
+      poster_path: "/99X2SgyFunJFXGAYnDv3sb9pnUD.jpg",
+      release_date: "1995-07-19",
+      title: "The Usual Suspects",
+      vote_average: 8.2,
+      vote_count: 10858,
+      genre: ["Drama", "Crime", "Thriller"],
+    },
+    {
+      backdrop_path: "/wQql3wQLO7RQBNDeGKUE91cYNld.jpg",
+      id: 1531023,
+      original_language: "tl",
+      original_title: "Bulong Ng Laman",
+      overview:
+        "A sexually frustrated woman purchases an antique vanity table that becomes an unexpected companion for her erotic fantasies.",
+      popularity: 12.3143,
+      poster_path: "/ta7JKGq0jhx2xJPrUw8yXheJaOf.jpg",
+      release_date: "2025-09-02",
+      title: "Bulong Ng Laman",
+      vote_average: 9,
+      vote_count: 2,
+      genre: ["Drama", "Fantasy"],
+    },
+    {
+      backdrop_path: "/rfkIeCaIHhN3K5wjJJqKmfUjYp8.jpg",
+      id: 381284,
+      original_language: "en",
+      original_title: "Hidden Figures",
+      overview:
+        "The untold story of Katherine G. Johnson, Dorothy Vaughan and Mary Jackson – brilliant African-American women working at NASA and serving as the brains behind one of the greatest operations in history – the launch of astronaut John Glenn into orbit. The visionary trio crossed all gender and race lines to inspire generations to dream big.",
+      popularity: 12.273,
+      poster_path: "/9lfz2W2uGjyow3am00rsPJ8iOyq.jpg",
+      release_date: "2016-12-10",
+      title: "Hidden Figures",
+      vote_average: 8.052,
+      vote_count: 10079,
+      genre: ["Drama", "History"],
+    },
+  ];
+}
