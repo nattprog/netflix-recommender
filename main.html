@@ -1,28 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">  
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Netflix Searcher</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- add a google font link here -->
-    <!-- add CSS reset here -->
-    <!-- add your CSS here -->
     <link
       href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,400;0,700;1,400;1,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/cssreset.css" />
-    <link rel="stylesheet" href="./css/main.css" />
-    <script src="js/main.js" type="module"></script>
+    <!-- Load a CSS reset stylesheet, to standardize styling across all browsers -->
+    <link rel="stylesheet" href="./cssreset.css" />
+    <!-- Load our custom CSS file -->
+    <link rel="stylesheet" href="./main.css" />
+    <!-- Load the js script -->
+    <script src="./main.js" type="module"></script>
   </head>
   <body class="container">
     <h1>Netflix Searcher</h1>
     <header>
       <nav>
-        <label for="movie-search">Search movie title:</label>
+        <!-- Search form -->
         <form action="" id="search-form">
+          <!-- Search input -->
+          <label for="movie-search">Search movie title:</label><br />
           <input
             type="search"
             list="movie-search-datalist"
@@ -31,6 +33,7 @@
             class="movie-search"
             placeholder="Enter movie title here"
           /><br />
+          <!-- Rating input for filter -->
           <label for="movie-search-rating">Rating more than:</label><br />
           <input
             type="number"
@@ -42,9 +45,13 @@
             class="movie-search-rating"
           />
           <br />
-          <!-- <datalist id="movie-search-datalist"> </datalist> -->
+          <!-- Select genre for filter -->
           <label for="movie-search-genre1">Genres matching:</label><br />
-          <select id="movie-search-genre1" name="movie-search-genre1" class="movie-search-genre">
+          <select
+            id="movie-search-genre1"
+            name="movie-search-genre1"
+            class="movie-search-genre"
+          >
             <option value="" selected>-</option>
             <option value="Action">Action</option>
             <option value="Adventure">Adventure</option>
@@ -66,7 +73,12 @@
             <option value="War">War</option>
             <option value="Western">Western</option></select
           ><br />
-          <select id="movie-search-genre2" name="movie-search-genre2" class="movie-search-genre">
+          <!-- Select genre for filter -->
+          <select
+            id="movie-search-genre2"
+            name="movie-search-genre2"
+            class="movie-search-genre"
+          >
             <option value="" selected>-</option>
             <option value="Action">Action</option>
             <option value="Adventure">Adventure</option>
@@ -88,7 +100,12 @@
             <option value="War">War</option>
             <option value="Western">Western</option></select
           ><br />
-          <select id="movie-search-genre3" name="movie-search-genre3" class="movie-search-genre">
+          <!-- Select genre for filter -->
+          <select
+            id="movie-search-genre3"
+            name="movie-search-genre3"
+            class="movie-search-genre"
+          >
             <option value="" selected>-</option>
             <option value="Action">Action</option>
             <option value="Adventure">Adventure</option>
@@ -110,6 +127,7 @@
             <option value="War">War</option>
             <option value="Western">Western</option></select
           ><br />
+          <!-- Input date for filter -->
           <label for="movie-search-date-after">Released after:</label>
           <br />
           <input
@@ -118,6 +136,7 @@
             name="release-start"
             class="movie-search-date"
           /><br />
+          <!-- Input date for filter -->
           <label for="movie-search-release-before">Released before:</label>
           <br />
           <input
@@ -132,9 +151,11 @@
       </nav>
     </header>
     <main>
-      <section class="results" id="search-results"></section>
+      <section class="results" id="search-results">
+        <!-- Section that will contain all the movie results -->
+      </section>
     </main>
-    <!-- template for generating content -->
+    <!-- template for generating movie content elements -->
     <template id="movie-template">
       <details data-ref="" class="movie">
         <summary class="summary">
@@ -152,8 +173,15 @@
         </div>
         <p><span>Overview: </span><span class="movie__overview"></span></p>
         <a href="" class="movie__imdb">Search movie on IMDB</a>
+        <br />
+        <br />
+        <button
+          onclick="window.location.href='https://youtu.be/GpcaJQ40q1Y?si=vWQEMcyPytpR3FT4';"
+        >
+          Watch Here
+        </button>
       </details>
     </template>
-    <!-- end of template for generating content -->
+    <!-- end of template for generating movie content elements -->
   </body>
 </html>
