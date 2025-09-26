@@ -1,3 +1,8 @@
+/* Smoothen all transitions and give the site a polished smooth feel */
+* {
+  transition: all 0.2s;
+}
+
 html,
 body {
   font-family: "Roboto", sans-serif;
@@ -85,12 +90,28 @@ select {
   padding-left: 10px;
 }
 
-a:link {
-  color: rgb(0, 0, 175);
+a,
+button {
+  display: inline-block;
+}
+
+a:link,
+a:visited {
+  color: rgb(255, 88, 22);
 }
 
 a:hover {
-  color: rgb(150, 0, 0);
+  color: rgb(255, 191, 30);
+}
+
+button {
+  background-color: rgb(114, 32, 0);
+  color: inherit;
+  border: solid 0.05rem black;
+}
+
+button:hover {
+  transform: scale(1.05);
 }
 
 .flex__main {
