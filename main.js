@@ -98,6 +98,10 @@ function addInputEventListener() {
 
 // Function to handle changing of values in the form
 function handleInput() {
+  // . . .
+  // Code omitted for brevity
+  // . . .
+
   // get all the form input elements' values
   let snippetSearch = document
     .querySelector("#movie-search")
@@ -130,7 +134,7 @@ function handleInput() {
 
     // match cases for filtering
 
-    // initialise BatMatch flag to false
+    // initialise BadMatch flag to false
     let BoolBadMatch = false;
     // filter out unmatches for title
     if (!summaryText.includes(snippetSearch)) {
